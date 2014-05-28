@@ -1,0 +1,5 @@
+/lib/
+/bin/
+/include/
+/inotify.egg-info/
+/.Python
