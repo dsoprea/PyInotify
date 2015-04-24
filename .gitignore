@@ -3,3 +3,6 @@
 /include/
 /inotify.egg-info/
 /.Python
+/build
+/dist
+*.pyc
