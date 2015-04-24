@@ -39,11 +39,11 @@ Code::
         try:
             for event in i.event_gen():
                 if event is not None:
-                    (header, type_names, filename) = event
+                    (header, type_names, watch_path, filename) = event
                     _LOGGER.info("WD=(%d) MASK=(%d) COOKIE=(%d) LEN=(%d) MASK->NAMES=%s "
-                                 "FILENAME=[%s]", 
+                                 "WATCH-PATH=[%s] FILENAME=[%s]", 
                                  header.wd, header.mask, header.cookie, header.len, type_names, 
-                                 filename)
+                                 watch_path, filename)
         finally:
             i.remove_watch('/tmp')
 
@@ -69,6 +69,31 @@ Screen output from the code, above::
     2015-04-24 05:02:17,412 - __main__ - INFO - WD=(1) MASK=(512) COOKIE=(0) LEN=(16) MASK->NAMES=['IN_DELETE'] FILENAME=[aa]
     2015-04-24 05:02:22,884 - __main__ - INFO - WD=(1) MASK=(1073742080) COOKIE=(0) LEN=(16) MASK->NAMES=['IN_ISDIR', 'IN_CREATE'] FILENAME=[dir1]
     2015-04-24 05:02:25,948 - __main__ - INFO - WD=(1) MASK=(1073742336) COOKIE=(0) LEN=(16) MASK->NAMES=['IN_ISDIR', 'IN_DELETE'] FILENAME=[dir1]
+
+
+==================
+Recursive Watching
+==================
+
+We also provide you with the ability to add a recursive watch on a path. It turns out that there's no low-cost way of doing this; That's the reason that this functionality isn't provided by the kernel. However, we recognize that this is, nonetheless, sometimes necessary.
+
+Example::
+
+    i = inotify.adapters.InotifyTree('/tmp/watch_tree')
+
+    for event in i.event_gen():
+        # Do stuff...
+
+        pass
+
+The only substantial difference is the type of object that was instantiated. Everything else is the same.
+
+This will immediately recurse through the directory tree and add watches on all subdirectories. New directories will automatically have watches added for them and deleted directories will be cleaned-up.
+
+The other differences from the standard functionality:
+
+- You can't remove a watch since watches are automatically managed.
+- Even if you provide a very restrictive mask that doesn't allow for directory create/delete events, the IN_ISDIR, IN_CREATE, and IN_DELETE flags will still be added.
 
 
 =====
