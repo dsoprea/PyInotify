@@ -102,7 +102,7 @@ This will immediately recurse through the directory tree and add watches on all 
 The other differences from the standard functionality:
 
 - You can't remove a watch since watches are automatically managed.
-- Even if you provide a very restrictive mask that doesn't allow for directory create/delete events, the IN_ISDIR, IN_CREATE, and IN_DELETE flags will still be added.
+- Even if you provide a very restrictive mask that doesn't allow for directory create/delete events, the *IN_ISDIR*, *IN_CREATE*, and *IN_DELETE* flags will still be added.
 
 
 =====
@@ -111,6 +111,4 @@ Notes
 
 - *epoll* is used to audit for *inotify* kernel events. This is the fastest file-descriptor "selecting" strategy.
 
-- The design of *inotify* kernel-functionality is such that recursive monitoring is left as an exercise for the developer, and is not as trivial as the standard use-case.
-
-- Due to the GIL locking considerations of Python (or any VM-based language), it is strongly recommended that, if you need to be performing other tasks *while* you're concurrently watching directories, you use *multiprocessing* to put the directory-watching in a process of it's own and feed information back [via queue/pipe/etc..]. This is especially true whenever your application is blocking on kernel functionality. Python's VM will remain locked and all other threads in your application will cease to function until something raises an event in the directories that are beign watched.
+- Due to the GIL locking considerations of Python (or any VM-based language), it is strongly recommended that, if you need to be performing other tasks *while* you're concurrently watching directories, you use *multiprocessing* to put the directory-watching in a process of its own and feed information back [via queue/pipe/etc..]. This is especially true whenever your application is blocking on kernel functionality. Python's VM will remain locked and all other threads in your application will cease to function until something raises an event in the directories that are being watched.
