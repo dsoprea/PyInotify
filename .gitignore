@@ -7,3 +7,4 @@
 /dist
 *.pyc
 /vagrant/.vagrant
+.DS_Store
