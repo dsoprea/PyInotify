@@ -65,7 +65,9 @@ class Inotify(object):
         our tracking since inotify already cleans-up the watch.
         """
 
-        wd = self.__watches[path]
+        wd = self.__watches.get(path)
+        if wd is None:
+            return
 
         del self.__watches[path]
         del self.__watches_r[wd]
@@ -131,7 +133,9 @@ class Inotify(object):
 
             self.__buffer = self.__buffer[event_length:]
 
-            path = self.__watches_r[header.wd]
+            path = self.__watches_r.get(header.wd)
+            if path is None:
+                break
             yield (header, type_names, path, filename)
 
             buffer_length = len(self.__buffer)
