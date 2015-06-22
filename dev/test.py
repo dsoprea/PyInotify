@@ -37,7 +37,7 @@ def _main():
     try:
         for event in i.event_gen():
             if event is not None:
-                (header, type_names, filename) = event
+                (header, type_names, path, filename) = event
                 _LOGGER.info("WD=(%d) MASK=(%d) COOKIE=(%d) LEN=(%d) MASK->NAMES=%s "
                              "FILENAME=[%s]", 
                              header.wd, header.mask, header.cookie, header.len, type_names, 
