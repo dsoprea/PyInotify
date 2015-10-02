@@ -1,7 +1,7 @@
 ## inotify_init1 flags.
 
-IN_CLOEXEC  = 02000000
-IN_NONBLOCK = 00004000
+IN_CLOEXEC  = 0x2000000
+IN_NONBLOCK = 0x0004000
 
 ## Supported events suitable for MASK parameter of INOTIFY_ADD_WATCH.
 
