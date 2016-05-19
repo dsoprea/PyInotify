@@ -30,8 +30,8 @@ _IS_DEBUG = bool(int(os.environ.get('DEBUG', '0')))
 
 
 class Inotify(object):
-    def __init__(self, paths=[], block_duration_s=_DEFAULT_EPOLL_BLOCK_DURATION_S):
-        self.__block_duration_s = block_duration_s
+    def __init__(self, paths=[], block_duration=_DEFAULT_EPOLL_BLOCK_DURATION_S):
+        self.__block_duration = block_duration
         self.__watches = {}
         self.__watches_r = {}
         self.__buffer = ''
@@ -45,6 +45,15 @@ class Inotify(object):
 
         for path in paths:
             self.add_watch(path)
+
+    def __get_block_duration(self):
+        """Allow the block-duration to be an integer or a function-call."""
+
+        try:
+            return self.__block_duration()
+        except TypeError:
+            # A scalar value describing seconds.
+            return self.__block_duration
 
     def __del__(self):
         _LOGGER.debug("Cleaning-up inotify.")
@@ -144,7 +153,8 @@ class Inotify(object):
 
     def event_gen(self):
         while True:
-            events = self.__epoll.poll(self.__block_duration_s)
+            block_duration_s = self.__get_block_duration()
+            events = self.__epoll.poll(block_duration_s)
             for fd, event_type in events:
                 # (fd) looks to always match the inotify FD.
 
