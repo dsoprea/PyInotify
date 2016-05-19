@@ -6,6 +6,8 @@ Overview
 
 We've designed this library to act as a generator. All you have to do is loop, and you'll see one event at a time and block in-between. After each cycle (all notified events were processed, or no events were received), you'll get a *None*. You may use this as an opportunity to perform other tasks, if your application is being primarily driven by *inotify* events. By default, we'll only block for one-second on queries to the kernel. This may be set to something else by passing a seconds-value into the constructor as *block_duration_s*.
 
+**This project is unrelated to the *PyInotify* project that existed prior to this one (this project began in 2015). That project is defunct and no longer available.**
+
 
 ==========
 Installing
