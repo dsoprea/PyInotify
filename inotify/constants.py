@@ -1,7 +1,7 @@
 ## inotify_init1 flags.
 
-IN_CLOEXEC  = 02000000
-IN_NONBLOCK = 00004000
+IN_CLOEXEC  = 0o2000000
+IN_NONBLOCK = 0o0004000
 
 ## Supported events suitable for MASK parameter of INOTIFY_ADD_WATCH.
 
@@ -44,8 +44,8 @@ IN_ISDIR       = 0x40000000 # Event occurred against dir.
 IN_ONESHOT     = 0x80000000 # Only send event once.
 
 MASK_LOOKUP = {
-    02000000: 'IN_CLOEXEC',
-    00004000: 'IN_NONBLOCK',
+    0o2000000: 'IN_CLOEXEC',
+    0o0004000: 'IN_NONBLOCK',
 
     ## Supported events suitable for MASK parameter of INOTIFY_ADD_WATCH.
 
