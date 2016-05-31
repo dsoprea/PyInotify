@@ -3,6 +3,7 @@ import select
 import os
 import struct
 import collections
+import sys
 
 import inotify.constants
 import inotify.calls
@@ -34,7 +35,7 @@ class Inotify(object):
         self.__block_duration = block_duration
         self.__watches = {}
         self.__watches_r = {}
-        self.__buffer = ''
+        self.__buffer = b''
 
         self.__inotify_fd = inotify.calls.inotify_init()
         _LOGGER.debug("Inotify handle is (%d).", self.__inotify_fd)
@@ -46,6 +47,16 @@ class Inotify(object):
         for path in paths:
             self.add_watch(path)
 
+    @staticmethod
+    def to_bytes(s):
+        text = unicode if sys.version_info.major == 2 else str
+        return s.encode(sys.getdefaultencoding()) if isinstance(s, text) else s
+
+    @staticmethod
+    def to_unicode(s):
+        bytestr = str if sys.version_info.major == 2 else bytes
+        return s.decode(sys.getdefaultencoding()) if isinstance(s, bytestr) else s
+                       
     def __get_block_duration(self):
         """Allow the block-duration to be an integer or a function-call."""
 
@@ -61,8 +72,7 @@ class Inotify(object):
 
     def add_watch(self, path, mask=inotify.constants.IN_ALL_EVENTS):
         _LOGGER.debug("Adding watch: [%s]", path)
-
-        wd = inotify.calls.inotify_add_watch(self.__inotify_fd, path, mask)
+        wd = inotify.calls.inotify_add_watch(self.__inotify_fd, self.to_bytes(path), mask)
         _LOGGER.debug("Added watch (%d): [%s]", wd, path)
 
         self.__watches[path] = wd
@@ -136,13 +146,12 @@ class Inotify(object):
                 return
 
             filename = self.__buffer[_STRUCT_HEADER_LENGTH:event_length]
-
             # Our filename is 16-byte aligned and right-padded with NULs.
-            filename = filename.rstrip('\0')
+            filename = self.to_unicode(filename).rstrip('\0')
 
             self.__buffer = self.__buffer[event_length:]
 
-            path = self.__watches_r.get(header.wd)
+            path = self.to_unicode(self.__watches_r.get(header.wd))
             if path is None:
                 break
             yield (header, type_names, path, filename)
@@ -181,7 +190,7 @@ class InotifyTree(object):
         self.__i = Inotify(block_duration_s=block_duration_s)
 
         self.__load_tree(path)
-
+        
     def __load_tree(self, path):
         _LOGGER.debug("Adding initial watches on tree: [%s]", path)
 
