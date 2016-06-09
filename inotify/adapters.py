@@ -30,8 +30,8 @@ _IS_DEBUG = bool(int(os.environ.get('DEBUG', '0')))
 
 
 class Inotify(object):
-    def __init__(self, paths=[], block_duration=_DEFAULT_EPOLL_BLOCK_DURATION_S):
-        self.__block_duration = block_duration
+    def __init__(self, paths=[], block_duration_s=_DEFAULT_EPOLL_BLOCK_DURATION_S):
+        self.__block_duration = block_duration_s
         self.__watches = {}
         self.__watches_r = {}
         self.__buffer = ''
