@@ -7,6 +7,7 @@ import sys
 
 import inotify.constants
 import inotify.calls
+from inotify.compat import fsdecode, fsencode
 
 # Constants.
 
@@ -46,16 +47,6 @@ class Inotify(object):
 
         for path in paths:
             self.add_watch(path)
-
-    @staticmethod
-    def to_bytes(s):
-        text = unicode if sys.version_info.major == 2 else str
-        return s.encode(sys.getdefaultencoding()) if isinstance(s, text) else s
-
-    @staticmethod
-    def to_unicode(s):
-        bytestr = str if sys.version_info.major == 2 else bytes
-        return s.decode(sys.getdefaultencoding()) if isinstance(s, bytestr) else s
                        
     def __get_block_duration(self):
         """Allow the block-duration to be an integer or a function-call."""
@@ -72,7 +63,7 @@ class Inotify(object):
 
     def add_watch(self, path, mask=inotify.constants.IN_ALL_EVENTS):
         _LOGGER.debug("Adding watch: [%s]", path)
-        wd = inotify.calls.inotify_add_watch(self.__inotify_fd, self.to_bytes(path), mask)
+        wd = inotify.calls.inotify_add_watch(self.__inotify_fd, fsencode(path), mask)
         _LOGGER.debug("Added watch (%d): [%s]", wd, path)
 
         self.__watches[path] = wd
@@ -147,11 +138,11 @@ class Inotify(object):
 
             filename = self.__buffer[_STRUCT_HEADER_LENGTH:event_length]
             # Our filename is 16-byte aligned and right-padded with NULs.
-            filename = self.to_unicode(filename).rstrip('\0')
+            filename = fsdecode(filename).rstrip('\0')
 
             self.__buffer = self.__buffer[event_length:]
 
-            path = self.to_unicode(self.__watches_r.get(header.wd))
+            path = fsencode(self.__watches_r.get(header.wd))
             if path is None:
                 break
             yield (header, type_names, path, filename)
