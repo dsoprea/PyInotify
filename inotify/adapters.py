@@ -34,7 +34,7 @@ class Inotify(object):
         self.__block_duration = block_duration_s
         self.__watches = {}
         self.__watches_r = {}
-        self.__buffer = ''
+        self.__buffer = bytearray()
 
         self.__inotify_fd = inotify.calls.inotify_init()
         _LOGGER.debug("Inotify handle is (%d).", self.__inotify_fd)
@@ -62,7 +62,8 @@ class Inotify(object):
     def add_watch(self, path, mask=inotify.constants.IN_ALL_EVENTS):
         _LOGGER.debug("Adding watch: [%s]", path)
 
-        wd = inotify.calls.inotify_add_watch(self.__inotify_fd, path, mask)
+        wd = inotify.calls.inotify_add_watch(self.__inotify_fd,
+                                             path.encode(), mask)
         _LOGGER.debug("Added watch (%d): [%s]", wd, path)
 
         self.__watches[path] = wd
@@ -138,7 +139,7 @@ class Inotify(object):
             filename = self.__buffer[_STRUCT_HEADER_LENGTH:event_length]
 
             # Our filename is 16-byte aligned and right-padded with NULs.
-            filename = filename.rstrip('\0')
+            filename = filename.decode().rstrip('\0')
 
             self.__buffer = self.__buffer[event_length:]
 
