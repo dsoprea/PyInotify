@@ -4,6 +4,8 @@ import os
 import struct
 import collections
 
+from errno import EINTR
+
 import inotify.constants
 import inotify.calls
 
@@ -154,7 +156,19 @@ class Inotify(object):
     def event_gen(self):
         while True:
             block_duration_s = self.__get_block_duration()
-            events = self.__epoll.poll(block_duration_s)
+
+            # Poll, but manage signal-related errors.
+
+            try:
+                events = self.__epoll.poll(block_duration_s)
+            except IOError as e:
+                if e.errno != EINTR:
+                    raise
+
+                continue
+
+            # Process events.
+
             for fd, event_type in events:
                 # (fd) looks to always match the inotify FD.
 
