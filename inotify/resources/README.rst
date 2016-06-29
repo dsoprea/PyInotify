@@ -45,7 +45,7 @@ Code::
     def _main():
         i = inotify.adapters.Inotify()
 
-        i.add_watch('/tmp')
+        i.add_watch(b'/tmp')
 
         try:
             for event in i.event_gen():
@@ -54,15 +54,17 @@ Code::
                     _LOGGER.info("WD=(%d) MASK=(%d) COOKIE=(%d) LEN=(%d) MASK->NAMES=%s "
                                  "WATCH-PATH=[%s] FILENAME=[%s]", 
                                  header.wd, header.mask, header.cookie, header.len, type_names, 
-                                 watch_path, filename)
+                                 watch_path.decode('utf-8'), filename.decode('utf-8'))
         finally:
-            i.remove_watch('/tmp')
+            i.remove_watch(b'/tmp')
 
     if __name__ == '__main__':
         _configure_logging()
         _main()
 
 You may also choose to pass the list of directories to watch via the *paths* parameter of the constructor. This would work best in situations where your list of paths is static. Also, the remove_watch() call is included in the example, but is not strictly necessary. The *inotify* resources is cleaned-up, which would clean-up any *inotify*-internal watch resources as well.
+
+Note that the directories to pass to the add_watch() and remove_watch() functions must be bytestring (in Python 3).  The same holds for the contents of the events that are returned.  It's up to the user to encode and decode any strings.
 
 Directory operations to raise events::
 
