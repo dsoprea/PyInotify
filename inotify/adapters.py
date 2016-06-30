@@ -36,7 +36,7 @@ class Inotify(object):
         self.__block_duration = block_duration_s
         self.__watches = {}
         self.__watches_r = {}
-        self.__buffer = ''
+        self.__buffer = b''
 
         self.__inotify_fd = inotify.calls.inotify_init()
         _LOGGER.debug("Inotify handle is (%d).", self.__inotify_fd)
@@ -140,7 +140,7 @@ class Inotify(object):
             filename = self.__buffer[_STRUCT_HEADER_LENGTH:event_length]
 
             # Our filename is 16-byte aligned and right-padded with NULs.
-            filename = filename.rstrip('\0')
+            filename = filename.rstrip(b'\0')
 
             self.__buffer = self.__buffer[event_length:]
 
