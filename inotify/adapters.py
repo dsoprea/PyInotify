@@ -196,10 +196,45 @@ class InotifyTree(object):
 
         self.__load_tree(path)
 
+class InotifyTrees(InotifyTree):
+    
+    def __init__(self, paths, mask=inotify.constants.IN_ALL_EVENTS, 
+                 block_duration_s=_DEFAULT_EPOLL_BLOCK_DURATION_S):
+
+        #self.__root_path = path
+
+        # No matter what we actually received as the mask, make sure we have 
+        # the minimum that we require to curate our list of watches.
+        self.__mask = mask | \
+                        inotify.constants.IN_ISDIR | \
+                        inotify.constants.IN_CREATE | \
+                        inotify.constants.IN_DELETE
+
+        self.__i = Inotify(block_duration_s=block_duration_s)
+
+        self.__load_trees(paths)
+
     def __load_tree(self, path):
         _LOGGER.debug("Adding initial watches on tree: [%s]", path)
 
         q = [path]
+        while q:
+            current_path = q[0]
+            del q[0]
+
+            self.__i.add_watch(current_path, self.__mask)
+
+            for filename in os.listdir(current_path):
+                entry_filepath = os.path.join(current_path, filename)
+                if os.path.isdir(entry_filepath) is False:
+                    continue
+
+                q.append(entry_filepath)
+
+    def __load_trees(self, paths):
+        _LOGGER.debug("Adding initial watches on trees: [%s]", ",".join(paths))
+
+        q = paths
         while q:
             current_path = q[0]
             del q[0]
