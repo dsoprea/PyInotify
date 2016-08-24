@@ -209,7 +209,7 @@ class BaseTree(object):
                                       "adding a watch on it (because we're "
                                       "being recursive): [%s]", full_path)
 
-                        self.__i.add_watch(full_path, self._mask)
+                        self._i.add_watch(full_path, self._mask)
                     elif header.mask & inotify.constants.IN_DELETE:
                         _LOGGER.debug("A directory has been removed. We're "
                                       "being recursive, but it would have "
