@@ -60,6 +60,10 @@ class Inotify(object):
     def __del__(self):
         _LOGGER.debug("Cleaning-up inotify.")
         os.close(self.__inotify_fd)
+        os.close(self.__epoll.fileno())
+
+    def get_inotify_fds(self):
+        return [self.__inotify_fd, self.__epoll.fileno()]
 
     def add_watch(self, path, mask=inotify.constants.IN_ALL_EVENTS):
         _LOGGER.debug("Adding watch: [%s]", path)
