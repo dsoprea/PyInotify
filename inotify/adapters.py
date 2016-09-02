@@ -84,7 +84,7 @@ class Inotify(object):
         del self.__watches_r[wd]
 
         if superficial is False:
-            _LOGGER.debug("Removing watch for watch-handle (%d): [%s]", 
+            _LOGGER.debug("Removing watch for watch-handle (%d): [%s]",
                           wd, path)
 
             inotify.calls.inotify_rm_watch(self.__inotify_fd, wd)
@@ -127,7 +127,7 @@ class Inotify(object):
             peek_slice = self.__buffer[:_STRUCT_HEADER_LENGTH]
 
             header_raw = struct.unpack(
-                            _HEADER_STRUCT_FORMAT, 
+                            _HEADER_STRUCT_FORMAT,
                             peek_slice)
 
             header = _INOTIFY_EVENT(*header_raw)
@@ -178,47 +178,26 @@ class Inotify(object):
 
             yield None
 
+class BaseTree(object):
 
-class InotifyTree(object):
-    def __init__(self, path, mask=inotify.constants.IN_ALL_EVENTS, 
+    def __init__(self, mask=inotify.constants.IN_ALL_EVENTS,
                  block_duration_s=_DEFAULT_EPOLL_BLOCK_DURATION_S):
 
-        self.__root_path = path
-
-        # No matter what we actually received as the mask, make sure we have 
+        # No matter what we actually received as the mask, make sure we have
         # the minimum that we require to curate our list of watches.
-        self.__mask = mask | \
+        self._mask = mask | \
                         inotify.constants.IN_ISDIR | \
                         inotify.constants.IN_CREATE | \
                         inotify.constants.IN_DELETE
 
-        self.__i = Inotify(block_duration_s=block_duration_s)
-
-        self.__load_tree(path)
-
-    def __load_tree(self, path):
-        _LOGGER.debug("Adding initial watches on tree: [%s]", path)
-
-        q = [path]
-        while q:
-            current_path = q[0]
-            del q[0]
-
-            self.__i.add_watch(current_path, self.__mask)
-
-            for filename in os.listdir(current_path):
-                entry_filepath = os.path.join(current_path, filename)
-                if os.path.isdir(entry_filepath) is False:
-                    continue
-
-                q.append(entry_filepath)
+        self._i = Inotify(block_duration_s=block_duration_s)
 
     def event_gen(self):
         """This is a secondary generator that wraps the principal one, and 
         adds/removes watches as directories are added/removed.
         """
 
-        for event in self.__i.event_gen():
+        for event in self._i.event_gen():
             if event is not None:
                 (header, type_names, path, filename) = event
 
@@ -230,14 +209,67 @@ class InotifyTree(object):
                                       "adding a watch on it (because we're "
                                       "being recursive): [%s]", full_path)
 
-                        self.__i.add_watch(full_path, self.__mask)
+                        self._i.add_watch(full_path, self._mask)
                     elif header.mask & inotify.constants.IN_DELETE:
                         _LOGGER.debug("A directory has been removed. We're "
                                       "being recursive, but it would have "
-                                      "automatically been deregistered: [%s]", 
+                                      "automatically been deregistered: [%s]",
                                       full_path)
 
                         # The watch would've already been cleaned-up internally.
-                        self.__i.remove_watch(full_path, superficial=True)
+                        self._i.remove_watch(full_path, superficial=True)
 
             yield event
+
+class InotifyTree(BaseTree):
+    def __init__(self, path, mask=inotify.constants.IN_ALL_EVENTS,
+                 block_duration_s=_DEFAULT_EPOLL_BLOCK_DURATION_S):
+        super(InotifyTree, self).__init__(mask=mask, block_duration_s=block_duration_s)
+
+        self.__root_path = path
+
+        self.__load_tree(path)
+
+    def __load_tree(self, path):
+        _LOGGER.debug("Adding initial watches on tree: [%s]", path)
+
+        q = [path]
+        while q:
+            current_path = q[0]
+            del q[0]
+
+            self._i.add_watch(current_path, self._mask)
+
+            for filename in os.listdir(current_path):
+                entry_filepath = os.path.join(current_path, filename)
+                if os.path.isdir(entry_filepath) is False:
+                    continue
+
+                q.append(entry_filepath)
+
+
+class InotifyTrees(BaseTree):
+
+    def __init__(self, paths, mask=inotify.constants.IN_ALL_EVENTS,
+                 block_duration_s=_DEFAULT_EPOLL_BLOCK_DURATION_S):
+        super(InotifyTrees, self).__init__(mask=mask, block_duration_s=block_duration_s)
+
+        self.__load_trees(paths)
+
+    def __load_trees(self, paths):
+        _LOGGER.debug("Adding initial watches on trees: [%s]", ",".join(paths))
+
+        q = paths
+        while q:
+            current_path = q[0]
+            del q[0]
+
+            self._i.add_watch(current_path, self._mask)
+
+            for filename in os.listdir(current_path):
+                entry_filepath = os.path.join(current_path, filename)
+                if os.path.isdir(entry_filepath) is False:
+                    continue
+
+                q.append(entry_filepath)
+
