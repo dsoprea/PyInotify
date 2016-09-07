@@ -145,9 +145,13 @@ class Inotify(object):
             self.__buffer = self.__buffer[event_length:]
 
             path = self.__watches_r.get(header.wd)
-            if path is None:
-                break
-            yield (header, type_names, path, filename)
+            if path is not None:
+                yield (header, type_names, path, filename)
+
+# TODO(dustin): !! For renames, we should drop the entry and re-add with the new name.
+# TODO(dustin): !! The add_watch() call should return the handle. We should be 
+#                  able to remove the watches using the handle (not just with 
+#                  the path).
 
             buffer_length = len(self.__buffer)
             if buffer_length < _STRUCT_HEADER_LENGTH:
