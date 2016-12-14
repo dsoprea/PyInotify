@@ -52,4 +52,7 @@ inotify_rm_watch = _LIB.inotify_rm_watch
 inotify_rm_watch.argtypes = [ctypes.c_int, ctypes.c_int]
 inotify_rm_watch.restype = _check_nonnegative
 
-errno = _LIB.errno
+if 'libc.musl' in _LIB._name:
+    errno = _LIB.err
+else:
+    errno = _LIB.errno
