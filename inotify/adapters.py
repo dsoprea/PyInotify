@@ -261,7 +261,7 @@ class InotifyTrees(BaseTree):
         self.__load_trees(paths)
 
     def __load_trees(self, paths):
-        _LOGGER.debug("Adding initial watches on trees: [%s]", ",".join(paths))
+        _LOGGER.debug("Adding initial watches on trees: [%s]", ",".join(map(str, paths)))
 
         q = paths
         while q:
