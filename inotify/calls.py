@@ -52,7 +52,9 @@ inotify_rm_watch = _LIB.inotify_rm_watch
 inotify_rm_watch.argtypes = [ctypes.c_int, ctypes.c_int]
 inotify_rm_watch.restype = _check_nonnegative
 
-if 'libc.musl' in _LIB._name:
+if getattr(_LIB, 'errno', None) is not None:
+    errno = _LIB.errno
+elif getattr(_LIB, 'err', None) is not None:
     errno = _LIB.err
 else:
-    errno = _LIB.errno
+    raise EnvironmentError("'errno' not found in library")
