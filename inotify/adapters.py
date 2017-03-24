@@ -71,8 +71,8 @@ class Inotify(object):
         self.__watches_r[wd] = path
 
     def remove_watch(self, path, superficial=False):
-        """Remove our tracking information and call inotify to stop watching 
-        the given path. When a directory is removed, we'll just have to remove 
+        """Remove our tracking information and call inotify to stop watching
+        the given path. When a directory is removed, we'll just have to remove
         our tracking since inotify already cleans-up the watch.
         """
 
@@ -149,8 +149,8 @@ class Inotify(object):
                 yield (header, type_names, path, filename)
 
 # TODO(dustin): !! For renames, we should drop the entry and re-add with the new name.
-# TODO(dustin): !! The add_watch() call should return the handle. We should be 
-#                  able to remove the watches using the handle (not just with 
+# TODO(dustin): !! The add_watch() call should return the handle. We should be
+#                  able to remove the watches using the handle (not just with
 #                  the path).
 
             buffer_length = len(self.__buffer)
@@ -197,7 +197,7 @@ class BaseTree(object):
         self._i = Inotify(block_duration_s=block_duration_s)
 
     def event_gen(self):
-        """This is a secondary generator that wraps the principal one, and 
+        """This is a secondary generator that wraps the principal one, and
         adds/removes watches as directories are added/removed.
         """
 
@@ -213,7 +213,7 @@ class BaseTree(object):
                                       "adding a watch on it (because we're "
                                       "being recursive): [%s]", full_path)
 
-                        self._i.add_watch(full_path, self._mask)
+                        self._load_tree(full_path)
                     elif header.mask & inotify.constants.IN_DELETE:
                         _LOGGER.debug("A directory has been removed. We're "
                                       "being recursive, but it would have "
@@ -225,18 +225,7 @@ class BaseTree(object):
 
             yield event
 
-class InotifyTree(BaseTree):
-    def __init__(self, path, mask=inotify.constants.IN_ALL_EVENTS,
-                 block_duration_s=_DEFAULT_EPOLL_BLOCK_DURATION_S):
-        super(InotifyTree, self).__init__(mask=mask, block_duration_s=block_duration_s)
-
-        self.__root_path = path
-
-        self.__load_tree(path)
-
-    def __load_tree(self, path):
-        _LOGGER.debug("Adding initial watches on tree: [%s]", path)
-
+    def _load_tree(self, path):
         q = [path]
         while q:
             current_path = q[0]
@@ -252,6 +241,20 @@ class InotifyTree(BaseTree):
                 q.append(entry_filepath)
 
 
+class InotifyTree(BaseTree):
+    def __init__(self, path, mask=inotify.constants.IN_ALL_EVENTS,
+                 block_duration_s=_DEFAULT_EPOLL_BLOCK_DURATION_S):
+        super(InotifyTree, self).__init__(mask=mask, block_duration_s=block_duration_s)
+
+        self.__root_path = path
+
+        self.__load_tree(path)
+
+    def __load_tree(self, path):
+        _LOGGER.debug("Adding initial watches on tree: [%s]", path)
+        self._load_tree(path)
+
+
 class InotifyTrees(BaseTree):
 
     def __init__(self, paths, mask=inotify.constants.IN_ALL_EVENTS,
@@ -262,18 +265,5 @@ class InotifyTrees(BaseTree):
 
     def __load_trees(self, paths):
         _LOGGER.debug("Adding initial watches on trees: [%s]", ",".join(map(str, paths)))
-
-        q = paths
-        while q:
-            current_path = q[0]
-            del q[0]
-
-            self._i.add_watch(current_path, self._mask)
-
-            for filename in os.listdir(current_path):
-                entry_filepath = os.path.join(current_path, filename)
-                if os.path.isdir(entry_filepath) is False:
-                    continue
-
-                q.append(entry_filepath)
-
+        for path in paths:
+            self._load_tree(path)
