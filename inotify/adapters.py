@@ -3,6 +3,7 @@ import select
 import os
 import struct
 import collections
+import time
 
 from errno import EINTR
 
@@ -31,12 +32,41 @@ _STRUCT_HEADER_LENGTH = struct.calcsize(_HEADER_STRUCT_FORMAT)
 _IS_DEBUG = bool(int(os.environ.get('DEBUG', '0')))
 
 
+class _Cookies(object):
+
+    PERIOD = 1
+
+    def __init__(self):
+        self.__cookies = {}
+
+    def cleanup(self):
+        t = time.time()
+        for k in list(self.__cookies):
+            ot, v = self.__cookies[k]
+            if t - ot > self.PERIOD:
+                del self.__cookies[k]
+
+    def register(self, cookie, info):
+        t = time.time()
+        prev = self.__cookies.get(cookie, None)
+        if prev is None:
+            self.cleanup()
+            self.__cookies[cookie] = (t, info)
+            return None
+        else:
+            old_info = prev[1]
+            del self.__cookies[cookie]
+            self.cleanup()
+            return old_info
+
+
 class Inotify(object):
     def __init__(self, paths=[], block_duration_s=_DEFAULT_EPOLL_BLOCK_DURATION_S):
         self.__block_duration = block_duration_s
         self.__watches = {}
         self.__watches_r = {}
         self.__buffer = b''
+        self.__cookies = _Cookies()
 
         self.__inotify_fd = inotify.calls.inotify_init()
         _LOGGER.debug("Inotify handle is (%d).", self.__inotify_fd)
@@ -69,6 +99,17 @@ class Inotify(object):
 
         self.__watches[path] = wd
         self.__watches_r[wd] = path
+        return wd
+
+    def __move_watch(self, old_path, new_path):
+
+        wd = self.__watches.get(old_path)
+        if wd is None:
+            return
+
+        del self.__watches[old_path]
+        self.__watches[new_path] = wd
+        self.__watches_r[wd] = new_path
 
     def remove_watch(self, path, superficial=False):
         """Remove our tracking information and call inotify to stop watching 
@@ -79,7 +120,14 @@ class Inotify(object):
         wd = self.__watches.get(path)
         if wd is None:
             return
+        self.__remove_watch(wd, superficial=superficial, path=None)
 
+    def __remove_watch(self, wd, superficial=False, path=None):
+        """Remove our tracking information and call inotify to stop watching 
+        the given wd
+        """
+
+        path = path or self.__watches_r[wd]
         del self.__watches[path]
         del self.__watches_r[wd]
 
@@ -146,12 +194,15 @@ class Inotify(object):
 
             path = self.__watches_r.get(header.wd)
             if path is not None:
-                yield (header, type_names, path, filename)
+                if header.mask & inotify.constants.IN_MOVE and header.cookie:
+                    old = self.__cookies.register(header.cookie, (path, filename))
+                    if old:
+                        new = path, filename
+                        if header.mask & inotify.constants.IN_MOVED_FROM:
+                            new, old = old, new
+                        self.__move_watch(os.path.join(*old), os.path.join(*new))
 
-# TODO(dustin): !! For renames, we should drop the entry and re-add with the new name.
-# TODO(dustin): !! The add_watch() call should return the handle. We should be 
-#                  able to remove the watches using the handle (not just with 
-#                  the path).
+                yield (header, type_names, path, filename)
 
             buffer_length = len(self.__buffer)
             if buffer_length < _STRUCT_HEADER_LENGTH:
