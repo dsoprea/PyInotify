@@ -222,6 +222,19 @@ class BaseTree(object):
 
                         # The watch would've already been cleaned-up internally.
                         self._i.remove_watch(full_path, superficial=True)
+                    elif header.mask & inotify.constants.IN_MOVED_FROM:
+                        _LOGGER.debug("A directory has been renamed. We're "
+                                      "being recursive, but it would have "
+                                      "automatically been deregistered: [%s]",
+                                      full_path)
+
+                        self._i.remove_watch(full_path, superficial=True)
+                    elif header.mask & inotify.constants.IN_MOVED_TO:
+                        _LOGGER.debug("A directory has been renamed. We're "
+                                      "adding a watch on it (because we're "
+                                      "being recursive): [%s]", full_path)
+
+                        self._i.add_watch(full_path, self._mask)
 
             yield event
 
