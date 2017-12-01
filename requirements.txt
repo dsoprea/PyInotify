@@ -1,1 +1,1 @@
-wsgiref==0.1.2
+inotify/resources/requirements.txt

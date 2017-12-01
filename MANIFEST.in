@@ -1,1 +1,2 @@
-include inotify/resources/*
+include inotify/resources/requirements.txt
+include inotify/resources/README.rst

@@ -1,0 +1,1 @@
+nosetests -s -v tests
