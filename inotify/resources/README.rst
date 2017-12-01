@@ -91,26 +91,6 @@ This will return everything that's happened since the last time you ran it (arti
 **Note that the event-loop will automatically register new folders to be watched, so, if you will create new folders and then potentially delete them, between calls, and are only retrieving the events in batches (like above) then you might experience issues. See the parameters for `event_gen()` for options to handle this scenario.**
 
 
-You may also choose to pass the list of directories to watch via the *paths* parameter of the constructor. This would work best in situations where your list of paths is static. Also, the remove_watch() call is included in the example, but is not strictly necessary. The *inotify* resources is cleaned-up, which would clean-up any *inotify*-internal watch resources as well.
-
-Directory operations to raise events::
-
-    $ touch /tmp/aa
-    $ rm /tmp/aa
-    $ mkdir /tmp/dir1
-    $ rmdir /tmp/dir1
-
-Screen output from the code, above::
-
-    2015-04-24 05:02:06,667 - __main__ - INFO - WD=(1) MASK=(256) COOKIE=(0) LEN=(16) MASK->NAMES=['IN_CREATE'] FILENAME=[aa]
-    2015-04-24 05:02:06,667 - __main__ - INFO - WD=(1) MASK=(32) COOKIE=(0) LEN=(16) MASK->NAMES=['IN_OPEN'] FILENAME=[aa]
-    2015-04-24 05:02:06,667 - __main__ - INFO - WD=(1) MASK=(4) COOKIE=(0) LEN=(16) MASK->NAMES=['IN_ATTRIB'] FILENAME=[aa]
-    2015-04-24 05:02:06,667 - __main__ - INFO - WD=(1) MASK=(8) COOKIE=(0) LEN=(16) MASK->NAMES=['IN_CLOSE_WRITE'] FILENAME=[aa]
-    2015-04-24 05:02:17,412 - __main__ - INFO - WD=(1) MASK=(512) COOKIE=(0) LEN=(16) MASK->NAMES=['IN_DELETE'] FILENAME=[aa]
-    2015-04-24 05:02:22,884 - __main__ - INFO - WD=(1) MASK=(1073742080) COOKIE=(0) LEN=(16) MASK->NAMES=['IN_ISDIR', 'IN_CREATE'] FILENAME=[dir1]
-    2015-04-24 05:02:25,948 - __main__ - INFO - WD=(1) MASK=(1073742336) COOKIE=(0) LEN=(16) MASK->NAMES=['IN_ISDIR', 'IN_DELETE'] FILENAME=[dir1]
-
-
 ==================
 Recursive Watching
 ==================
@@ -140,8 +120,13 @@ The other differences from the standard functionality:
 Notes
 =====
 
-- *epoll* is used to audit for *inotify* kernel events. This is the fastest file-descriptor "select" strategy.
+- *epoll* is used to audit for *inotify* kernel events.
+
 - **The earlier versions of this project had only partial Python 3 compatibility (string related). This required doing the string<->bytes conversions outside of this project. As of the current version, this has been fixed. However, this means that Python 3 users may experience breakages until this is compensated-for on their end. It will obviously be trivial for this project to detect the type of the arguments that are passed but there'd be no concrete way of knowing which type to return. Better to just fix it completely now and move forward.**
+
+- You may also choose to pass the list of directories to watch via the *paths* parameter of the constructor. This would work best in situations where your list of paths is static.
+
+- Calling `remove_watch()` is not strictly necessary. The *inotify* resources is automatically cleaned-up, which would clean-up all watch resources as well.
 
 
 =======
