@@ -26,7 +26,7 @@ setuptools.setup(
     author_email='myselfasunder@gmail.com',
     url='https://github.com/dsoprea/PyInotify',
     license='GPL 2',
-    packages=setuptools.find_packages(exclude=['dev']),
+    packages=setuptools.find_packages(exclude=['tests']),
     include_package_data=True,
     zip_safe=False,
     install_requires=_INSTALL_REQUIRES,

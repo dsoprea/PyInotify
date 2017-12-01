@@ -1,3 +1,6 @@
+|Build\_Status|
+|Coverage\_Status|
+
 ========
 Overview
 ========
@@ -52,8 +55,8 @@ Code::
                 if event is not None:
                     (header, type_names, watch_path, filename) = event
                     _LOGGER.info("WD=(%d) MASK=(%d) COOKIE=(%d) LEN=(%d) MASK->NAMES=%s "
-                                 "WATCH-PATH=[%s] FILENAME=[%s]", 
-                                 header.wd, header.mask, header.cookie, header.len, type_names, 
+                                 "WATCH-PATH=[%s] FILENAME=[%s]",
+                                 header.wd, header.mask, header.cookie, header.len, type_names,
                                  watch_path.decode('utf-8'), filename.decode('utf-8'))
         finally:
             i.remove_watch(b'/tmp')
@@ -63,8 +66,6 @@ Code::
         _main()
 
 You may also choose to pass the list of directories to watch via the *paths* parameter of the constructor. This would work best in situations where your list of paths is static. Also, the remove_watch() call is included in the example, but is not strictly necessary. The *inotify* resources is cleaned-up, which would clean-up any *inotify*-internal watch resources as well.
-
-Note that the directories to pass to the add_watch() and remove_watch() functions must be bytestring (in Python 3).  The same holds for the contents of the events that are returned.  It's up to the user to encode and decode any strings.
 
 Directory operations to raise events::
 
@@ -109,10 +110,37 @@ The other differences from the standard functionality:
 - Even if you provide a very restrictive mask that doesn't allow for directory create/delete events, the *IN_ISDIR*, *IN_CREATE*, and *IN_DELETE* flags will still be added.
 
 
+=======
+Testing
+=======
+
+Call "test.sh" to run the tests:
+
+```
+$ ./test.sh
+test__cycle (tests.test_inotify.TestInotify) ... ok
+test__get_event_names (tests.test_inotify.TestInotify) ... ok
+test__automatic_new_watches_on_existing_paths (tests.test_inotify.TestInotifyTree) ... ok
+test__automatic_new_watches_on_new_paths (tests.test_inotify.TestInotifyTree) ... ok
+test__cycle (tests.test_inotify.TestInotifyTree) ... ok
+test__renames (tests.test_inotify.TestInotifyTree) ... ok
+test__cycle (tests.test_inotify.TestInotifyTrees) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 11.034s
+
+OK
+```
+
+
 =====
 Notes
 =====
 
-- *epoll* is used to audit for *inotify* kernel events. This is the fastest file-descriptor "selecting" strategy.
+- *epoll* is used to audit for *inotify* kernel events. This is the fastest file-descriptor "select" strategy.
+- **The earlier versions of this project had only partial Python 3 compatibility (string related). This required doing the string<->bytes conversions outside of this project. As of the current version, this has been fixed. However, this means that Python 3 users may experience breakages until this is compensated-for on their end. It will obviously be trivial for this project to detect the type of the arguments that are passed but we'd have no concrete way of know what types should be returned. Better to just completely fix it now and move forward.
 
-- Due to the GIL locking considerations of Python (or any VM-based language), it is strongly recommended that, if you need to be performing other tasks *while* you're concurrently watching directories, you use *multiprocessing* to put the directory-watching in a process of its own and feed information back [via queue/pipe/etc..]. This is especially true whenever your application is blocking on kernel functionality. Python's VM will remain locked and all other threads in your application will cease to function until something raises an event in the directories that are being watched.
+.. |Build_Status| image:: https://travis-ci.org/dsoprea/PyInotify.svg?branch=master
+   :target: https://travis-ci.org/dsoprea/PyInotify
+.. |Coverage_Status| image:: https://coveralls.io/repos/github/dsoprea/PyInotify/badge.svg?branch=master
+   :target: https://coveralls.io/github/dsoprea/PyInotify?branch=master
