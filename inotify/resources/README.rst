@@ -27,43 +27,69 @@ Example
 
 Code::
 
-    import logging
-
     import inotify.adapters
-
-    _DEFAULT_LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-
-    _LOGGER = logging.getLogger(__name__)
-
-    def _configure_logging():
-        _LOGGER.setLevel(logging.DEBUG)
-
-        ch = logging.StreamHandler()
-
-        formatter = logging.Formatter(_DEFAULT_LOG_FORMAT)
-        ch.setFormatter(formatter)
-
-        _LOGGER.addHandler(ch)
 
     def _main():
         i = inotify.adapters.Inotify()
 
-        i.add_watch(b'/tmp')
+        i.add_watch('/tmp')
 
-        try:
-            for event in i.event_gen():
-                if event is not None:
-                    (header, type_names, watch_path, filename) = event
-                    _LOGGER.info("WD=(%d) MASK=(%d) COOKIE=(%d) LEN=(%d) MASK->NAMES=%s "
-                                 "WATCH-PATH=[%s] FILENAME=[%s]",
-                                 header.wd, header.mask, header.cookie, header.len, type_names,
-                                 watch_path.decode('utf-8'), filename.decode('utf-8'))
-        finally:
-            i.remove_watch(b'/tmp')
+        with open('/tmp/test_file', 'w'):
+            pass
+
+        for event in i.event_gen(yield_nones=False):
+            (_, type_names, path, filename) = event
+
+            print("PATH=[{}] FILENAME=[{}] EVENT_TYPES={}".format(
+                  path, filename, type_names))
 
     if __name__ == '__main__':
-        _configure_logging()
         _main()
+
+Output::
+
+    PATH=[/tmp] FILENAME=[test_file] EVENT_TYPES=['IN_MODIFY']
+    PATH=[/tmp] FILENAME=[test_file] EVENT_TYPES=['IN_OPEN']
+    PATH=[/tmp] FILENAME=[test_file] EVENT_TYPES=['IN_CLOSE_WRITE']
+    ^CTraceback (most recent call last):
+      File "inotify_test.py", line 18, in <module>
+        _main()
+      File "inotify_test.py", line 11, in _main
+        for event in i.event_gen(yield_nones=False):
+      File "/home/dustin/development/python/pyinotify/inotify/adapters.py", line 202, in event_gen
+        events = self.__epoll.poll(block_duration_s)
+    KeyboardInterrupt
+
+Note that this works quite nicely, but, in the event that you don't want to be driven by the loop, you can also provide a timeout and then even flatten the output of the generator directly to a list::
+
+    import inotify.adapters
+
+    def _main():
+        i = inotify.adapters.Inotify()
+
+        i.add_watch('/tmp')
+
+        with open('/tmp/test_file', 'w'):
+            pass
+
+        events = i.event_gen(yield_nones=False, timeout_s=1)
+        events = list(events)
+
+        print(events)
+
+    if __name__ == '__main__':
+        _main()
+
+This will return everything that's happened since the last time you ran it (artificially formatted here)::
+
+    [
+        (_INOTIFY_EVENT(wd=1, mask=2, cookie=0, len=16), ['IN_MODIFY'], '/tmp', u'test_file'),
+        (_INOTIFY_EVENT(wd=1, mask=32, cookie=0, len=16), ['IN_OPEN'], '/tmp', u'test_file'),
+        (_INOTIFY_EVENT(wd=1, mask=8, cookie=0, len=16), ['IN_CLOSE_WRITE'], '/tmp', u'test_file')
+    ]
+
+**Note that the event-loop will automatically register new folders to be watched, so, if you will create new folders and then potentially delete them, between calls, and are only retrieving the events in batches (like above) then you might experience issues. See the parameters for `event_gen()` for options to handle this scenario.**
+
 
 You may also choose to pass the list of directories to watch via the *paths* parameter of the constructor. This would work best in situations where your list of paths is static. Also, the remove_watch() call is included in the example, but is not strictly necessary. The *inotify* resources is cleaned-up, which would clean-up any *inotify*-internal watch resources as well.
 
