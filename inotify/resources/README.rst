@@ -25,7 +25,7 @@ Install via *pip*::
 Example
 =======
 
-Code::
+Code for monitoring a simple, flat path (see "Recursive Watching" for watching a hierarchical structure)::
 
     import inotify.adapters
 
@@ -88,14 +88,14 @@ This will return everything that's happened since the last time you ran it (arti
         (_INOTIFY_EVENT(wd=1, mask=8, cookie=0, len=16), ['IN_CLOSE_WRITE'], '/tmp', u'test_file')
     ]
 
-**Note that the event-loop will automatically register new folders to be watched, so, if you will create new folders and then potentially delete them, between calls, and are only retrieving the events in batches (like above) then you might experience issues. See the parameters for `event_gen()` for options to handle this scenario.**
+**Note that the event-loop will automatically register new directories to be watched, so, if you will create new directories and then potentially delete them, between calls, and are only retrieving the events in batches (like above) then you might experience issues. See the parameters for `event_gen()` for options to handle this scenario.**
 
 
 ==================
 Recursive Watching
 ==================
 
-We also provide you with the ability to add a recursive watch on a path. It turns out that there's no low-cost way of doing this; That's the reason that this functionality isn't provided by the kernel. However, we recognize that this is, nonetheless, sometimes necessary.
+There is also the ability to add a recursive watch on a path.
 
 Example::
 
@@ -106,19 +106,19 @@ Example::
 
         pass
 
-The only substantial difference is the type of object that was instantiated. Everything else is the same.
-
 This will immediately recurse through the directory tree and add watches on all subdirectories. New directories will automatically have watches added for them and deleted directories will be cleaned-up.
 
 The other differences from the standard functionality:
 
 - You can't remove a watch since watches are automatically managed.
-- Even if you provide a very restrictive mask that doesn't allow for directory create/delete events, the *IN_ISDIR*, *IN_CREATE*, and *IN_DELETE* flags will still be added.
+- Even if you provide a very restrictive mask that doesn't allow for directory create/delete events, the *IN_ISDIR*, *IN_CREATE*, and *IN_DELETE* flags will still be seen.
 
 
 =====
 Notes
 =====
+
+- **IMPORTANT:** Recursively monitoring paths is **not** a functionality provided by the kernel. Rather, we artificially implement it. As directory-created events are received, we create watches for the child directories on-the-fly. This means that there is potential for a race condition: if a directory is created and a file or directory is created inside before you (using the `event_gen()` loop) have a chance to observe it, then you are going to have a problem: If it is a file, then you will miss the events related to its creation, but, if it is a directory, then not only will you miss those creation events but this library will also miss them and not be able to add a watch for them. If you are dealing with a **large number of hierarchical directory creations** and have the ability to be aware new directories via a secondary channel with some lead time before any files are populated *into* them, you can take advantage of this and call `add_watch()` manually. In this case there is limited value in using `InotifyTree()`/`InotifyTree()` instead of just `Inotify()` but this choice is left to you.
 
 - *epoll* is used to audit for *inotify* kernel events.
 

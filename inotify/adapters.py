@@ -81,6 +81,15 @@ class Inotify(object):
     def add_watch(self, path_unicode, mask=inotify.constants.IN_ALL_EVENTS):
         _LOGGER.debug("Adding watch: [%s]", path_unicode)
 
+        # Because there might be race-conditions in the recursive handling (see
+        # the notes in the documentation), we recommend to add watches using
+        # data from a secondary channel, if possible, which means that we might
+        # then be adding it, yet again, if we then receive it in the normal
+        # fashion afterward.
+        if path_unicode in self.__watches:
+            _LOGGER.warning("Path already being watched: [%s]", path_unicode)
+            return
+
         path_bytes = path_unicode.encode('utf8')
 
         wd = inotify.calls.inotify_add_watch(self.__inotify_fd, path_bytes, mask)
