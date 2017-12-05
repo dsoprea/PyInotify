@@ -308,6 +308,10 @@ class _BaseTree(object):
 
             yield event
 
+    @property
+    def inotify(self):
+        return self._i
+
 
 class InotifyTree(_BaseTree):
     """Recursively watch a path."""
