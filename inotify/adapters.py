@@ -140,10 +140,8 @@ class Inotify(object):
 
         return names
 
-    def _handle_inotify_event(self, wd, event_type):
+    def _handle_inotify_event(self, wd):
         """Handle a series of events coming-in from inotify."""
-
-        names = self._get_event_names(event_type)
 
         b = os.read(wd, 1024)
         if not b:
@@ -222,11 +220,11 @@ class Inotify(object):
 
             # Process events.
 
-            for fd, event_type in events:
+            for fd, _ in events:
                 # (fd) looks to always match the inotify FD.
 
                 for (header, type_names, path, filename) \
-                        in self._handle_inotify_event(fd, event_type):
+                        in self._handle_inotify_event(fd):
                     last_hit_s = time.time()
 
                     e = (header, type_names, path, filename)
