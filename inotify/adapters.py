@@ -74,7 +74,7 @@ class Inotify(object):
         try:
             return self.__block_duration()
         except TypeError:
-            # A scalar value describing seconds.
+            # A scalar value describing milliseconds.
             return self.__block_duration
 
     def __del__(self):
