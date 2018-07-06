@@ -7,6 +7,8 @@ import time
 
 from errno import EINTR
 
+import fcntl
+
 import inotify.constants
 import inotify.calls
 
@@ -140,12 +142,14 @@ class Inotify(object):
 
         return names
 
-    def _handle_inotify_event(self, wd, event_type):
+    def _handle_inotify_event(self, inotify_fd, event_type):
         """Handle a series of events coming-in from inotify."""
 
-        names = self._get_event_names(event_type)
+        # Set the inotify file-descriptor to non-blocking since blocks have been seen on os.read
+        flag = fcntl.fcntl(inotify_fd, fcntl.F_GETFL)
+        fcntl.fcntl(inotify_fd, fcntl.F_SETFL, flag | os.O_NONBLOCK)
 
-        b = os.read(wd, 1024)
+        b = os.read(inotify_fd, 1024)
         if not b:
             return
 
