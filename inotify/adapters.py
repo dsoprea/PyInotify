@@ -142,14 +142,14 @@ class Inotify(object):
 
         return names
 
-    def _handle_inotify_event(self, inotify_fd, event_type):
+    def _handle_inotify_event(self, wd, event_type):
         """Handle a series of events coming-in from inotify."""
 
         # Set the inotify file-descriptor to non-blocking since blocks have been seen on os.read
-        flag = fcntl.fcntl(inotify_fd, fcntl.F_GETFL)
-        fcntl.fcntl(inotify_fd, fcntl.F_SETFL, flag | os.O_NONBLOCK)
+        flag = fcntl.fcntl(wd, fcntl.F_GETFL)
+        fcntl.fcntl(wd, fcntl.F_SETFL, flag | os.O_NONBLOCK)
 
-        b = os.read(inotify_fd, 1024)
+        b = os.read(wd, 1024)
         if not b:
             return
 
