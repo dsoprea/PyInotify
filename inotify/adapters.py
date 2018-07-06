@@ -59,6 +59,7 @@ class Inotify(object):
         self.__inotify_fd = inotify.calls.inotify_init()
         _LOGGER.debug("Inotify handle is (%d).", self.__inotify_fd)
 
+        # Prefer poll over epoll. Some efficiency losses but broader compatibility - specifically gevent
         self.__poll = select.poll()
         self.__poll.register(self.__inotify_fd, select.POLLIN)
 
