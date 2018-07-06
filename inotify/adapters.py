@@ -59,6 +59,10 @@ class Inotify(object):
         self.__inotify_fd = inotify.calls.inotify_init()
         _LOGGER.debug("Inotify handle is (%d).", self.__inotify_fd)
 
+        # Set the inotify file-descriptor to non-blocking since we have found blocks on os.read for this
+        flag = fcntl.fcntl(self.__inotify_fd, fcntl.F_GETFL)
+        fcntl.fcntl(self.__inotify_fd, fcntl.F_SETFL, flag | os.O_NONBLOCK)
+
         # Prefer poll over epoll. Some efficiency losses but broader compatibility - specifically gevent
         self.__poll = select.poll()
         self.__poll.register(self.__inotify_fd, select.POLLIN)
@@ -145,11 +149,6 @@ class Inotify(object):
 
     def _handle_inotify_event(self, wd, event_type):
         """Handle a series of events coming-in from inotify."""
-
-        # Set the inotify file-descriptor to non-blocking since blocks have been seen on os.read
-        flag = fcntl.fcntl(wd, fcntl.F_GETFL)
-        fcntl.fcntl(wd, fcntl.F_SETFL, flag | os.O_NONBLOCK)
-
         b = os.read(wd, 1024)
         if not b:
             return
