@@ -147,9 +147,10 @@ class Inotify(object):
 
         return names
 
-    def _handle_inotify_event(self, wd, event_type):
+    @staticmethod
+    def _handle_inotify_event(self, inotify_fd, event_type):
         """Handle a series of events coming-in from inotify."""
-        b = os.read(wd, 1024)
+        b = os.read(inotify_fd, 1024)
         if not b:
             return
 
@@ -226,11 +227,11 @@ class Inotify(object):
 
             # Process events.
 
-            for fd, event_type in events:
-                # (fd) looks to always match the inotify FD.
+            for _, event_type in events:
+                # First result is the file descriptor attached to inotify
 
                 for (header, type_names, path, filename) \
-                        in self._handle_inotify_event(fd, event_type):
+                        in self._handle_inotify_event(self.__inotify_fd, event_type):
                     last_hit_s = time.time()
 
                     e = (header, type_names, path, filename)
