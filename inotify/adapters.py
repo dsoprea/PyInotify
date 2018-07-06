@@ -74,12 +74,7 @@ class Inotify(object):
 
     def __get_block_duration(self):
         """Allow the block-duration to be an integer or a function-call."""
-
-        try:
-            return self.__block_duration()
-        except TypeError:
-            # A scalar value describing milliseconds.
-            return self.__block_duration
+        return self.__block_duration
 
     def __del__(self):
         _LOGGER.debug("Cleaning-up inotify.")
