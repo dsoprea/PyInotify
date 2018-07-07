@@ -221,7 +221,7 @@ class Inotify(object):
 
             # Process events.
 
-            for fd, event_type in events:
+            for fd, _ in events:
                 # (fd) looks to always match the inotify FD.
 
                 names = self._get_event_names(event_type)
