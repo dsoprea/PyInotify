@@ -142,7 +142,6 @@ class Inotify(object):
 
         return names
 
-    @staticmethod
     def _handle_inotify_event(self, inotify_fd, event_type):
         """Handle a series of events coming-in from inotify."""
         b = os.read(inotify_fd, 1024)
