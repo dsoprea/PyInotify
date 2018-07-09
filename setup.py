@@ -16,7 +16,7 @@ _DESCRIPTION = \
 
 setuptools.setup(
     name='inotify',
-    version=inotify.__version__+'dd.1',
+    version=inotify.__version__+'+dd.1',
     description=_DESCRIPTION,
     long_description=_LONG_DESCRIPTION,
     classifiers=[
