@@ -1,3 +1,6 @@
+|Build\_Status|
+|Coverage\_Status|
+
 ========
 Overview
 ========
@@ -22,73 +25,77 @@ Install via *pip*::
 Example
 =======
 
-Code::
-
-    import logging
+Code for monitoring a simple, flat path (see "Recursive Watching" for watching a hierarchical structure)::
 
     import inotify.adapters
-
-    _DEFAULT_LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-
-    _LOGGER = logging.getLogger(__name__)
-
-    def _configure_logging():
-        _LOGGER.setLevel(logging.DEBUG)
-
-        ch = logging.StreamHandler()
-
-        formatter = logging.Formatter(_DEFAULT_LOG_FORMAT)
-        ch.setFormatter(formatter)
-
-        _LOGGER.addHandler(ch)
 
     def _main():
         i = inotify.adapters.Inotify()
 
-        i.add_watch(b'/tmp')
+        i.add_watch('/tmp')
 
-        try:
-            for event in i.event_gen():
-                if event is not None:
-                    (header, type_names, watch_path, filename) = event
-                    _LOGGER.info("WD=(%d) MASK=(%d) COOKIE=(%d) LEN=(%d) MASK->NAMES=%s "
-                                 "WATCH-PATH=[%s] FILENAME=[%s]", 
-                                 header.wd, header.mask, header.cookie, header.len, type_names, 
-                                 watch_path.decode('utf-8'), filename.decode('utf-8'))
-        finally:
-            i.remove_watch(b'/tmp')
+        with open('/tmp/test_file', 'w'):
+            pass
+
+        for event in i.event_gen(yield_nones=False):
+            (_, type_names, path, filename) = event
+
+            print("PATH=[{}] FILENAME=[{}] EVENT_TYPES={}".format(
+                  path, filename, type_names))
 
     if __name__ == '__main__':
-        _configure_logging()
         _main()
 
-You may also choose to pass the list of directories to watch via the *paths* parameter of the constructor. This would work best in situations where your list of paths is static. Also, the remove_watch() call is included in the example, but is not strictly necessary. The *inotify* resources is cleaned-up, which would clean-up any *inotify*-internal watch resources as well.
+Output::
 
-Note that the directories to pass to the add_watch() and remove_watch() functions must be bytestring (in Python 3).  The same holds for the contents of the events that are returned.  It's up to the user to encode and decode any strings.
+    PATH=[/tmp] FILENAME=[test_file] EVENT_TYPES=['IN_MODIFY']
+    PATH=[/tmp] FILENAME=[test_file] EVENT_TYPES=['IN_OPEN']
+    PATH=[/tmp] FILENAME=[test_file] EVENT_TYPES=['IN_CLOSE_WRITE']
+    ^CTraceback (most recent call last):
+      File "inotify_test.py", line 18, in <module>
+        _main()
+      File "inotify_test.py", line 11, in _main
+        for event in i.event_gen(yield_nones=False):
+      File "/home/dustin/development/python/pyinotify/inotify/adapters.py", line 202, in event_gen
+        events = self.__epoll.poll(block_duration_s)
+    KeyboardInterrupt
 
-Directory operations to raise events::
+Note that this works quite nicely, but, in the event that you don't want to be driven by the loop, you can also provide a timeout and then even flatten the output of the generator directly to a list::
 
-    $ touch /tmp/aa
-    $ rm /tmp/aa
-    $ mkdir /tmp/dir1
-    $ rmdir /tmp/dir1
+    import inotify.adapters
 
-Screen output from the code, above::
+    def _main():
+        i = inotify.adapters.Inotify()
 
-    2015-04-24 05:02:06,667 - __main__ - INFO - WD=(1) MASK=(256) COOKIE=(0) LEN=(16) MASK->NAMES=['IN_CREATE'] FILENAME=[aa]
-    2015-04-24 05:02:06,667 - __main__ - INFO - WD=(1) MASK=(32) COOKIE=(0) LEN=(16) MASK->NAMES=['IN_OPEN'] FILENAME=[aa]
-    2015-04-24 05:02:06,667 - __main__ - INFO - WD=(1) MASK=(4) COOKIE=(0) LEN=(16) MASK->NAMES=['IN_ATTRIB'] FILENAME=[aa]
-    2015-04-24 05:02:06,667 - __main__ - INFO - WD=(1) MASK=(8) COOKIE=(0) LEN=(16) MASK->NAMES=['IN_CLOSE_WRITE'] FILENAME=[aa]
-    2015-04-24 05:02:17,412 - __main__ - INFO - WD=(1) MASK=(512) COOKIE=(0) LEN=(16) MASK->NAMES=['IN_DELETE'] FILENAME=[aa]
-    2015-04-24 05:02:22,884 - __main__ - INFO - WD=(1) MASK=(1073742080) COOKIE=(0) LEN=(16) MASK->NAMES=['IN_ISDIR', 'IN_CREATE'] FILENAME=[dir1]
-    2015-04-24 05:02:25,948 - __main__ - INFO - WD=(1) MASK=(1073742336) COOKIE=(0) LEN=(16) MASK->NAMES=['IN_ISDIR', 'IN_DELETE'] FILENAME=[dir1]
+        i.add_watch('/tmp')
+
+        with open('/tmp/test_file', 'w'):
+            pass
+
+        events = i.event_gen(yield_nones=False, timeout_s=1)
+        events = list(events)
+
+        print(events)
+
+    if __name__ == '__main__':
+        _main()
+
+This will return everything that's happened since the last time you ran it (artificially formatted here)::
+
+    [
+        (_INOTIFY_EVENT(wd=1, mask=2, cookie=0, len=16), ['IN_MODIFY'], '/tmp', u'test_file'),
+        (_INOTIFY_EVENT(wd=1, mask=32, cookie=0, len=16), ['IN_OPEN'], '/tmp', u'test_file'),
+        (_INOTIFY_EVENT(wd=1, mask=8, cookie=0, len=16), ['IN_CLOSE_WRITE'], '/tmp', u'test_file')
+    ]
+
+**Note that the event-loop will automatically register new directories to be watched, so, if you will create new directories and then potentially delete them, between calls, and are only retrieving the events in batches (like above) then you might experience issues. See the parameters for `event_gen()` for options to handle this scenario.**
 
 
 ==================
 Recursive Watching
 ==================
 
-We also provide you with the ability to add a recursive watch on a path. It turns out that there's no low-cost way of doing this; That's the reason that this functionality isn't provided by the kernel. However, we recognize that this is, nonetheless, sometimes necessary.
+There is also the ability to add a recursive watch on a path.
 
 Example::
 
@@ -99,20 +106,52 @@ Example::
 
         pass
 
-The only substantial difference is the type of object that was instantiated. Everything else is the same.
-
 This will immediately recurse through the directory tree and add watches on all subdirectories. New directories will automatically have watches added for them and deleted directories will be cleaned-up.
 
 The other differences from the standard functionality:
 
 - You can't remove a watch since watches are automatically managed.
-- Even if you provide a very restrictive mask that doesn't allow for directory create/delete events, the *IN_ISDIR*, *IN_CREATE*, and *IN_DELETE* flags will still be added.
+- Even if you provide a very restrictive mask that doesn't allow for directory create/delete events, the *IN_ISDIR*, *IN_CREATE*, and *IN_DELETE* flags will still be seen.
 
 
 =====
 Notes
 =====
 
-- *epoll* is used to audit for *inotify* kernel events. This is the fastest file-descriptor "selecting" strategy.
+- **IMPORTANT:** Recursively monitoring paths is **not** a functionality provided by the kernel. Rather, we artificially implement it. As directory-created events are received, we create watches for the child directories on-the-fly. This means that there is potential for a race condition: if a directory is created and a file or directory is created inside before you (using the `event_gen()` loop) have a chance to observe it, then you are going to have a problem: If it is a file, then you will miss the events related to its creation, but, if it is a directory, then not only will you miss those creation events but this library will also miss them and not be able to add a watch for them. If you are dealing with a **large number of hierarchical directory creations** and have the ability to be aware new directories via a secondary channel with some lead time before any files are populated *into* them, you can take advantage of this and call `add_watch()` manually. In this case there is limited value in using `InotifyTree()`/`InotifyTree()` instead of just `Inotify()` but this choice is left to you.
 
-- Due to the GIL locking considerations of Python (or any VM-based language), it is strongly recommended that, if you need to be performing other tasks *while* you're concurrently watching directories, you use *multiprocessing* to put the directory-watching in a process of its own and feed information back [via queue/pipe/etc..]. This is especially true whenever your application is blocking on kernel functionality. Python's VM will remain locked and all other threads in your application will cease to function until something raises an event in the directories that are being watched.
+- *epoll* is used to audit for *inotify* kernel events.
+
+- **The earlier versions of this project had only partial Python 3 compatibility (string related). This required doing the string<->bytes conversions outside of this project. As of the current version, this has been fixed. However, this means that Python 3 users may experience breakages until this is compensated-for on their end. It will obviously be trivial for this project to detect the type of the arguments that are passed but there'd be no concrete way of knowing which type to return. Better to just fix it completely now and move forward.**
+
+- You may also choose to pass the list of directories to watch via the *paths* parameter of the constructor. This would work best in situations where your list of paths is static.
+
+- Calling `remove_watch()` is not strictly necessary. The *inotify* resources is automatically cleaned-up, which would clean-up all watch resources as well.
+
+
+=======
+Testing
+=======
+
+Call "test.sh" to run the tests::
+
+    $ ./test.sh
+    test__cycle (tests.test_inotify.TestInotify) ... ok
+    test__get_event_names (tests.test_inotify.TestInotify) ... ok
+    test__international_naming_python2 (tests.test_inotify.TestInotify) ... SKIP: Not in Python 2
+    test__international_naming_python3 (tests.test_inotify.TestInotify) ... ok
+    test__automatic_new_watches_on_existing_paths (tests.test_inotify.TestInotifyTree) ... ok
+    test__automatic_new_watches_on_new_paths (tests.test_inotify.TestInotifyTree) ... ok
+    test__cycle (tests.test_inotify.TestInotifyTree) ... ok
+    test__renames (tests.test_inotify.TestInotifyTree) ... ok
+    test__cycle (tests.test_inotify.TestInotifyTrees) ... ok
+
+    ----------------------------------------------------------------------
+    Ran 9 tests in 12.039s
+
+    OK (SKIP=1)
+
+.. |Build_Status| image:: https://travis-ci.org/dsoprea/PyInotify.svg?branch=master
+   :target: https://travis-ci.org/dsoprea/PyInotify
+.. |Coverage_Status| image:: https://coveralls.io/repos/github/dsoprea/PyInotify/badge.svg?branch=master
+   :target: https://coveralls.io/github/dsoprea/PyInotify?branch=master
