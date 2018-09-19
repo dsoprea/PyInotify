@@ -2,9 +2,11 @@
 
 import os
 import unittest
+import errno
 
 import inotify.constants
 import inotify.adapters
+import inotify.calls
 import inotify.test_support
 
 try:
@@ -145,6 +147,16 @@ class TestInotify(unittest.TestCase):
 
         self.assertEquals(names, all_names)
 
+    def test__exception_errno(self):
+        with inotify.test_support.temp_path() as path:
+            i = inotify.adapters.Inotify()
+            errnum = None
+            path1 = os.path.join(path, 'abc')
+            try:
+                i.add_watch(path1)
+            except inotify.calls.InotifyError as ex:
+                errnum = ex.errno
+            self.assertEquals(errnum, errno.ENOENT)
 
 class TestInotifyTree(unittest.TestCase):
     def __init__(self, *args, **kwargs):
