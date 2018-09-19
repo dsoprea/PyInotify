@@ -326,7 +326,13 @@ class _BaseTree(object):
                                       "if target parent dir is within "
                                       "our tree: [%s]", full_path)
 
-                        self._i.remove_watch(full_path, superficial=False)
+                        try:
+                            self._i.remove_watch(full_path, superficial=False)
+                        except inotify.calls.InotifyError as ex:
+                            # for the unlikely case the moved diretory is deleted
+                            # and automatically unregistered before we try to
+                            # unregister....
+                            pass
 
             yield event
 
