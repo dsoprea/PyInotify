@@ -115,7 +115,7 @@ class Inotify(object):
 
         del self.__watches[path]
 
-        self.remove_watch_with_id(wd)
+        self.remove_watch_with_id(wd, superficial)
 
     def remove_watch_with_id(self, wd, superficial=False):
         del self.__watches_r[wd]
