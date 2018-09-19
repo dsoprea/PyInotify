@@ -100,30 +100,42 @@ class Inotify(object):
 
         return wd
 
+    def _remove_watch(self, wd, path, superficial=False):
+        _LOGGER.debug("Removing watch for watch-handle (%d): [%s]",
+                      wd, path)
+
+        if superficial is not None:
+            del self.__watches[path]
+            del self.__watches_r[wd]
+            inotify.adapters._LOGGER.debug(".. removed from adaptor")
+        if superficial is not False:
+            return
+        inotify.calls.inotify_rm_watch(self.__inotify_fd, wd)
+        _LOGGER.debug(".. removed from inotify")
+
+
     def remove_watch(self, path, superficial=False):
         """Remove our tracking information and call inotify to stop watching
         the given path. When a directory is removed, we'll just have to remove
         our tracking since inotify already cleans-up the watch.
+        With superficial set to None it is also possible to remove only inotify
+        watch to be able to wait for the final IN_IGNORED event received for
+        the wd (useful for example in threaded applications).
         """
 
         wd = self.__watches.get(path)
         if wd is None:
+            _LOGGER.warning("Path not in watch list: [%s]", path_unicode)
             return
-
-        _LOGGER.debug("Removing watch for watch-handle (%d): [%s]",
-                      wd, path)
-
-        del self.__watches[path]
-
-        self.remove_watch_with_id(wd, superficial)
+        self._remove_watch(wd, path, superficial)
 
     def remove_watch_with_id(self, wd, superficial=False):
-        del self.__watches_r[wd]
-
-        if superficial is False:
-            _LOGGER.debug("Removing watch for watch-handle (%d).", wd)
-
-            inotify.calls.inotify_rm_watch(self.__inotify_fd, wd)
+        """Same as remove_watch but does the same by id"""
+        path = self.__watches_r.get(wd)
+        if path is None:
+            _LOGGER.warning("Watchdescriptor not in watch list: [%d]", wd)
+            return
+        self._remove_watch(wd, path, superficial)
 
     def _get_event_names(self, event_type):
         names = []
@@ -309,17 +321,12 @@ class _BaseTree(object):
                         self._i.remove_watch(full_path, superficial=True)
                     elif header.mask & inotify.constants.IN_MOVED_FROM:
                         _LOGGER.debug("A directory has been renamed. We're "
-                                      "being recursive, but it would have "
-                                      "automatically been deregistered: [%s]",
-                                      full_path)
+                                      "being recursive, we will remove watch "
+                                      "from it and re-add with IN_MOVED_TO "
+                                      "if target parent dir is within "
+                                      "our tree: [%s]", full_path)
 
-                        self._i.remove_watch(full_path, superficial=True)
-                    elif header.mask & inotify.constants.IN_MOVED_TO:
-                        _LOGGER.debug("A directory has been renamed. We're "
-                                      "adding a watch on it (because we're "
-                                      "being recursive): [%s]", full_path)
-
-                        self._i.add_watch(full_path, self._mask)
+                        self._i.remove_watch(full_path, superficial=False)
 
             yield event
 
