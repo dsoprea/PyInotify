@@ -110,6 +110,7 @@ This will immediately recurse through the directory tree and add watches on all 
 
 The other differences from the standard functionality:
 
+- You can ignore specific directories with the *ignored_dirs* parameter.
 - You can't remove a watch since watches are automatically managed.
 - Even if you provide a very restrictive mask that doesn't allow for directory create/delete events, the *IN_ISDIR*, *IN_CREATE*, and *IN_DELETE* flags will still be seen.
 
