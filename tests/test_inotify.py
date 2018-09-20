@@ -38,6 +38,7 @@ def setUpModule():
             (inotify.adapters._INOTIFY_EVENT(wd=1, mask=1073741825, cookie=0, len=16), ['IN_ACCESS', 'IN_ISDIR'], path, subdirname),
             (inotify.adapters._INOTIFY_EVENT(wd=1, mask=1073741840, cookie=0, len=16), ['IN_ISDIR', 'IN_CLOSE_NOWRITE'], path, subdirname),
         ]
+        global _HAS_DIRECTORY_ACCESS_EVENTS
         if events == expected_na:
             _HAS_DIRECTORY_ACCESS_EVENTS = False
         elif events == expected_wa:
@@ -52,6 +53,11 @@ class TestInotify(unittest.TestCase):
         self.maxDiff = None
 
         super(TestInotify, self).__init__(*args, **kwargs)
+
+    @classmethod
+    def setUpClass(cls):
+        global _HAS_DIRECTORY_ACCESS_EVENTS
+        cls._HAS_DIRECTORY_ACCESS_EVENTS = _HAS_DIRECTORY_ACCESS_EVENTS
 
     def __read_all_events(self, i):
         events = list(i.event_gen(timeout_s=1, yield_nones=False))
@@ -184,6 +190,11 @@ class TestInotifyTree(unittest.TestCase):
 
         super(TestInotifyTree, self).__init__(*args, **kwargs)
 
+    @classmethod
+    def setUpClass(cls):
+        global _HAS_DIRECTORY_ACCESS_EVENTS
+        cls._HAS_DIRECTORY_ACCESS_EVENTS = _HAS_DIRECTORY_ACCESS_EVENTS
+
     def __read_all_events(self, i):
         events = list(i.event_gen(timeout_s=1, yield_nones=False))
         return events
@@ -260,7 +271,7 @@ class TestInotifyTree(unittest.TestCase):
 
             events1 = self.__read_all_events(i)
 
-            if _HAS_DIRECTORY_ACCESS_EVENTS:
+            if self._HAS_DIRECTORY_ACCESS_EVENTS:
                 expected = [
                     (inotify.adapters._INOTIFY_EVENT(wd=1, mask=1073742080, cookie=0, len=16), ['IN_ISDIR', 'IN_CREATE'], path, 'old_folder'),
                     (inotify.adapters._INOTIFY_EVENT(wd=1, mask=1073741856, cookie=0, len=16), ['IN_ISDIR', 'IN_OPEN'], path, 'old_folder'),
@@ -281,7 +292,7 @@ class TestInotifyTree(unittest.TestCase):
 
             events2 = self.__read_all_events(i)
 
-            if _HAS_DIRECTORY_ACCESS_EVENTS:
+            if self._HAS_DIRECTORY_ACCESS_EVENTS:
                 expected = [
                     (inotify.adapters._INOTIFY_EVENT(wd=1, mask=1073741888, cookie=events2[1][0].cookie, len=16), ['IN_MOVED_FROM', 'IN_ISDIR'], path, 'old_folder'),
                     (inotify.adapters._INOTIFY_EVENT(wd=1, mask=1073741952, cookie=events2[0][0].cookie, len=16), ['IN_MOVED_TO', 'IN_ISDIR'], path, 'new_folder'),
@@ -360,7 +371,7 @@ class TestInotifyTree(unittest.TestCase):
 
             events = self.__read_all_events(i)
 
-            if _HAS_DIRECTORY_ACCESS_EVENTS:
+            if self._HAS_DIRECTORY_ACCESS_EVENTS:
                 expected = [
                     (inotify.adapters._INOTIFY_EVENT(wd=1, mask=1073742080, cookie=0, len=16), ['IN_ISDIR', 'IN_CREATE'], path, 'folder1'),
                     (inotify.adapters._INOTIFY_EVENT(wd=1, mask=1073741856, cookie=0, len=16), ['IN_ISDIR', 'IN_OPEN'], path, 'folder1'),
@@ -381,7 +392,7 @@ class TestInotifyTree(unittest.TestCase):
 
             events = self.__read_all_events(i)
 
-            if _HAS_DIRECTORY_ACCESS_EVENTS:
+            if self._HAS_DIRECTORY_ACCESS_EVENTS:
                 expected = [
                     (inotify.adapters._INOTIFY_EVENT(wd=2, mask=1073742080, cookie=0, len=16), ['IN_ISDIR', 'IN_CREATE'], path1, 'folder2'),
                     (inotify.adapters._INOTIFY_EVENT(wd=2, mask=1073741856, cookie=0, len=16), ['IN_ISDIR', 'IN_OPEN'], path1, 'folder2'),
