@@ -223,9 +223,13 @@ class Inotify(object):
 
             for fd, event_type in events:
                 # (fd) looks to always match the inotify FD.
-
-                names = self._get_event_names(event_type)
-                _LOGGER.debug("Events received from epoll: {}".format(names))
+                
+                #names = self._get_event_names(event_type)
+                #_LOGGER.debug("Events received from epoll: {}".format(names))
+                #remove confusing event name... if resolved it should resolve to
+                #proper EPOLL* name (EPOLLIN/1 should be common case)
+                #but implement this just for this single debug line?
+                _LOGGER.debug("Events received from epoll (mask o%o)", event_type)
 
                 for (header, type_names, path, filename) \
                         in self._handle_inotify_event(fd):
@@ -257,7 +261,7 @@ class Inotify(object):
 
 class _BaseTree(object):
     def __init__(self, mask=inotify.constants.IN_ALL_EVENTS,
-                 block_duration_s=_DEFAULT_EPOLL_BLOCK_DURATION_S):
+                 block_duration_s=_DEFAULT_EPOLL_BLOCK_DURATION_S, ignored_dirs=[]):
 
         # No matter what we actually received as the mask, make sure we have
         # the minimum that we require to curate our list of watches.
@@ -266,6 +270,7 @@ class _BaseTree(object):
                         inotify.constants.IN_CREATE | \
                         inotify.constants.IN_DELETE
 
+        self._ignored_dirs = ignored_dirs
         self._i = Inotify(block_duration_s=block_duration_s)
 
     def event_gen(self, ignore_missing_new_folders=False, **kwargs):
@@ -291,13 +296,13 @@ class _BaseTree(object):
                        (
                         os.path.exists(full_path) is True or
                         ignore_missing_new_folders is False
-                       ):
+                       ) and full_path not in self._ignored_dirs:
                         _LOGGER.debug("A directory has been created. We're "
                                       "adding a watch on it (because we're "
                                       "being recursive): [%s]", full_path)
 
 
-                        self._i.add_watch(full_path, self._mask)
+                        self._load_tree(full_path, self._ignored_dirs)
 
                     if header.mask & inotify.constants.IN_MOVED_FROM:
                         _LOGGER.debug("A directory has been removed. We're "
@@ -319,7 +324,8 @@ class _BaseTree(object):
                                       "adding a watch on it (because we're "
                                       "being recursive): [%s]", full_path)
 
-                        self._i.add_watch(full_path, self._mask)
+                        self._load_tree(full_path, self._ignored_dirs)
+
 
             yield event
 
@@ -327,20 +333,7 @@ class _BaseTree(object):
     def inotify(self):
         return self._i
 
-
-class InotifyTree(_BaseTree):
-    """Recursively watch a path."""
-
-    def __init__(self, path, mask=inotify.constants.IN_ALL_EVENTS,
-                 block_duration_s=_DEFAULT_EPOLL_BLOCK_DURATION_S, ignored_dirs=[]):
-        super(InotifyTree, self).__init__(mask=mask, block_duration_s=block_duration_s)
-
-        self.__root_path = path
-
-        self.__load_tree(path, ignored_dirs)
-
-    def __load_tree(self, path, ignored_dirs):
-        _LOGGER.debug("Adding initial watches on tree: [%s]", path)
+    def _load_tree(self, path, ignored_dirs):
 
         paths = []
 
@@ -361,6 +354,22 @@ class InotifyTree(_BaseTree):
             self._i.add_watch(path, self._mask)
 
 
+class InotifyTree(_BaseTree):
+    """Recursively watch a path."""
+
+    def __init__(self, path, mask=inotify.constants.IN_ALL_EVENTS,
+                 block_duration_s=_DEFAULT_EPOLL_BLOCK_DURATION_S, ignored_dirs=[]):
+        super(InotifyTree, self).__init__(mask=mask, block_duration_s=block_duration_s)
+
+        self.__root_path = path
+
+        self.__load_tree(path, ignored_dirs)
+
+    def __load_tree(self, path, ignored_dirs):
+        _LOGGER.debug("Adding initial watches on tree: [%s]", path)
+        self._load_tree(path, ignored_dirs)
+
+
 class InotifyTrees(_BaseTree):
     """Recursively watch over a list of trees."""
 
@@ -372,21 +381,5 @@ class InotifyTrees(_BaseTree):
 
     def __load_trees(self, paths, ignored_dirs):
         _LOGGER.debug("Adding initial watches on trees: [%s]", ",".join(map(str, paths)))
-
-        found = []
-
-        q = paths
-        while q:
-            current_path = q[0]
-            del q[0]
-            
-            if current_path not in ignored_dirs:
-                found.append(current_path)
-                for filename in os.listdir(current_path):
-                    entry_filepath = os.path.join(current_path, filename)
-                    if os.path.isdir(entry_filepath) is False:
-                        continue
-                    q.append(entry_filepath)
-
-        for path in found:
-            self._i.add_watch(path, self._mask)
+        for path in paths:
+            self._load_tree(path, ignored_dirs)
