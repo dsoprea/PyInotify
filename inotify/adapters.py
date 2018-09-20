@@ -350,7 +350,6 @@ class InotifyTree(_BaseTree):
             del q[0]
             
             if current_path not in ignored_dirs:
-                self._i.add_watch(current_path, self._mask)
                 paths.append(current_path)
                 for filename in os.listdir(current_path):
                     entry_filepath = os.path.join(current_path, filename)
