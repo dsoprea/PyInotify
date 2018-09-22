@@ -368,6 +368,7 @@ class TestInotifyTree(unittest.TestCase):
             os.rmdir(path1)
             events = self.__read_all_events(i)
             os.mkdir(path1)
+            events = self.__read_all_events(i)
             os.rename(path1, path2)
             events = self.__read_all_events(i)
 
