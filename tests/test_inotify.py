@@ -2,6 +2,7 @@
 
 import os
 import unittest
+import shutil
 
 import inotify.constants
 import inotify.adapters
@@ -381,6 +382,80 @@ class TestInotifyTree(unittest.TestCase):
 
             self.assertEquals(watches_expect, watches_reg_names)
             self.assertEquals(watches_reg_check, watches_reverse)
+
+    def test__readd_deleted_folder(self):
+        #test for https://github.com/dsoprea/PyInotify/issues/51
+        #doing no checks the directory-discovery events as current master does
+        #not generate events that should really be expected in this case
+        #avoid having to adjust this - also not implement chcking for expected
+        #wd assignment now..
+        #just check for no exception, file creation events and expected watches
+        #at the end. emulate slow succession of filesystem actions... (because
+        #of another unfixed bug and because this is needed to reproduces issue)
+        with inotify.test_support.temp_path() as path:
+            path1 = os.path.join(path, 'folder')
+            file1 = os.path.join(path1, 'file1')
+            file2 = os.path.join(path1, 'file2')
+
+            i = inotify.adapters.InotifyTree(path)
+            os.mkdir(path1)
+            events = self.__read_all_events(i)
+            with open(file1, 'w'):
+                pass
+            with open(file2, 'w'):
+                pass
+            events = self.__read_all_events(i)
+
+            expected = [
+                (inotify.adapters._INOTIFY_EVENT(wd=2, mask=256, cookie=0, len=16), ['IN_CREATE'], path1, 'file1'),
+                (inotify.adapters._INOTIFY_EVENT(wd=2, mask=32, cookie=0, len=16), ['IN_OPEN'], path1, 'file1'),
+                (inotify.adapters._INOTIFY_EVENT(wd=2, mask=8, cookie=0, len=16), ['IN_CLOSE_WRITE'], path1, 'file1'),
+                (inotify.adapters._INOTIFY_EVENT(wd=2, mask=256, cookie=0, len=16), ['IN_CREATE'], path1, 'file2'),
+                (inotify.adapters._INOTIFY_EVENT(wd=2, mask=32, cookie=0, len=16), ['IN_OPEN'], path1, 'file2'),
+                (inotify.adapters._INOTIFY_EVENT(wd=2, mask=8, cookie=0, len=16), ['IN_CLOSE_WRITE'], path1, 'file2'),
+            ]
+            self.assertEquals(events, expected)
+
+            shutil.rmtree(path1)
+            events = self.__read_all_events(i)
+
+            #could do the following asserts here to prove the the assumption of amigian74 in
+            #his 5th point in issue 51 ("everything until now works fine") false, but that is
+            #not target of this test, also it is not his reposibility to verify this...
+            #so to get same issue he describes it's just a comment...
+            #self.assertEquals(len(i._i._Inotify__watches), 1)
+            #self.assertEquals(len(i._i._Inotify__watches_r), 1)
+            #self.assertNotIn(path1, i._i._Inotify__watches)
+
+            os.mkdir(path1)
+            events = self.__read_all_events(i)
+            with open(file1, 'w'):
+                pass
+            with open(file2, 'w'):
+                pass
+            events = self.__read_all_events(i)
+
+            watches = i._i._Inotify__watches
+            watches_reverse = i._i._Inotify__watches_r
+
+            watches_expect = sorted((path,path1))
+            watches_reg_names = sorted(watches.keys())
+            watches_reg_check = dict((value, key) for key, value in watches.items())
+
+            self.assertEquals(watches_expect, watches_reg_names)
+            self.assertEquals(watches_reg_check, watches_reverse)
+
+            wd = watches[path1]
+            expected = [
+                (inotify.adapters._INOTIFY_EVENT(wd=wd, mask=256, cookie=0, len=16), ['IN_CREATE'], path1, 'file1'),
+                (inotify.adapters._INOTIFY_EVENT(wd=wd, mask=32, cookie=0, len=16), ['IN_OPEN'], path1, 'file1'),
+                (inotify.adapters._INOTIFY_EVENT(wd=wd, mask=8, cookie=0, len=16), ['IN_CLOSE_WRITE'], path1, 'file1'),
+                (inotify.adapters._INOTIFY_EVENT(wd=wd, mask=256, cookie=0, len=16), ['IN_CREATE'], path1, 'file2'),
+                (inotify.adapters._INOTIFY_EVENT(wd=wd, mask=32, cookie=0, len=16), ['IN_OPEN'], path1, 'file2'),
+                (inotify.adapters._INOTIFY_EVENT(wd=wd, mask=8, cookie=0, len=16), ['IN_CLOSE_WRITE'], path1, 'file2'),
+            ]
+            self.assertEquals(events, expected)
+
 
 class TestInotifyTrees(unittest.TestCase):
     def __init__(self, *args, **kwargs):
