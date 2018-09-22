@@ -166,7 +166,7 @@ class Inotify(object):
 
             header = _INOTIFY_EVENT(*header_raw)
             type_names = self._get_event_names(header.mask)
-            _LOGGER.debug("Events received in stream: {}".format(type_names))
+            _LOGGER.debug("Events received in stream: {0}".format(type_names))
 
             event_length = (_STRUCT_HEADER_LENGTH + header.len)
             if length < event_length:
@@ -225,7 +225,7 @@ class Inotify(object):
                 # (fd) looks to always match the inotify FD.
 
                 names = self._get_event_names(event_type)
-                _LOGGER.debug("Events received from epoll: {}".format(names))
+                _LOGGER.debug("Events received from epoll: {0}".format(names))
 
                 for (header, type_names, path, filename) \
                         in self._handle_inotify_event(fd):
