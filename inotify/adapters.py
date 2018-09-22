@@ -5,6 +5,14 @@ import struct
 import collections
 import time
 
+if hasattr(os, 'scandir'):
+    from os import walk
+else:
+    try:
+        from scandir import walk
+    except ImportError:
+        from os import walk
+
 from errno import EINTR
 
 import inotify.constants
@@ -340,21 +348,33 @@ class _BaseTree(object):
         return self._i
 
     def _load_tree(self, path):
+        def filter_dirs_add_watches_gen(inotify, mask, dirpath, subdirs, ignored_subdirs):
+            for subdir in subdirs:
+                if subdir in ignored_subdirs:
+                    continue
+                inotify.add_watch(os.path.join(dirpath, subdir), mask)
+                yield subdir
+
+        inotify = self._i
+        mask = self._mask
+        inotify.add_watch(path, mask)
         ignored_dirs = self._ignored_dirs
-        for dirpath, subdirs, _f in os.walk(path):
-            self._i.add_watch(dirpath, self._mask)
-            ignored = ignored_dirs.get(dirpath)
-            if ignored:
-                subdirs[:] = (subdir for subdir in subdirs if subdir not in ignored)
+
+        for dirpath, subdirs, _f in walk(path):
+            ignored_subdirs = ignored_dirs.get(dirpath)
+            if ignored_subdirs:
+                subdirs[:] = filter_dirs_add_watches_gen(inotify, mask, dirpath, subdirs, ignored_subdirs)
+                continue
+            for subdir in subdirs:
+                inotify.add_watch(os.path.join(dirpath, subdir), mask)
 
 class InotifyTree(_BaseTree):
     """Recursively watch a path."""
 
     def __init__(self, path, mask=inotify.constants.IN_ALL_EVENTS,
                  block_duration_s=_DEFAULT_EPOLL_BLOCK_DURATION_S, ignored_dirs=[]):
-        super(InotifyTree, self).__init__(mask=mask, block_duration_s=block_duration_s)
-
-        self.__root_path = path
+        super(InotifyTree, self).__init__(mask=mask, block_duration_s=block_duration_s,
+              ignored_dirs=ignored_dirs)
 
         self.__load_tree(path)
 
@@ -368,7 +388,8 @@ class InotifyTrees(_BaseTree):
 
     def __init__(self, paths, mask=inotify.constants.IN_ALL_EVENTS,
                  block_duration_s=_DEFAULT_EPOLL_BLOCK_DURATION_S, ignored_dirs=[]):
-        super(InotifyTrees, self).__init__(mask=mask, block_duration_s=block_duration_s)
+        super(InotifyTrees, self).__init__(mask=mask, block_duration_s=block_duration_s,
+              ignored_dirs=ignored_dirs)
 
         self.__load_trees(paths)
 
