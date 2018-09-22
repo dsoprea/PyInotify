@@ -273,10 +273,15 @@ class _BaseTree(object):
 
         # No matter what we actually received as the mask, make sure we have
         # the minimum that we require to curate our list of watches.
+        #
+        # todo: we really should have two masks... the combined one (requested|needed)
+        # and the user specified mask for the events he wants to receive from tree...
         self._mask = mask | \
                         inotify.constants.IN_ISDIR | \
                         inotify.constants.IN_CREATE | \
-                        inotify.constants.IN_DELETE
+                        inotify.constants.IN_MOVED_TO | \
+                        inotify.constants.IN_DELETE | \
+                        inotify.constants.IN_MOVED_FROM
 
         self._i = Inotify(block_duration_s=block_duration_s)
 
@@ -302,6 +307,13 @@ class _BaseTree(object):
                        ) and \
                        (
                         os.path.exists(full_path) is True or
+                        # todo: as long as the "Path already being watche/not in watch list" warnings
+                        # instead of exceptions are in place, it should really be default to also log
+                        # only a warning if target folder does not exists in tree autodiscover mode.
+                        # - but probably better to implement that with try/catch around add_watch
+                        # when errno fix is merged and also this should normally not be an argument
+                        # to event_gen but to InotifyTree(s) constructor (at least set default there)
+                        # to not steal someones use case to specify this differently for each event_call??
                         ignore_missing_new_folders is False
                        ):
                         _LOGGER.debug("A directory has been created. We're "
