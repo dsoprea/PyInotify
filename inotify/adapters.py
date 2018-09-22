@@ -125,7 +125,7 @@ class Inotify(object):
 
         wd = self.__watches.get(path)
         if wd is None:
-            _LOGGER.warning("Path not in watch list: [%s]", path_unicode)
+            _LOGGER.warning("Path not in watch list: [%s]", path)
             return
         self._remove_watch(wd, path, superficial)
 
