@@ -376,7 +376,7 @@ class TestInotifyTree(unittest.TestCase):
             watches_reverse = i._i._Inotify__watches_r
 
             watches_expect = sorted((path,path2))
-            watches_reg_names = sorted(sorted(watches.keys()))
+            watches_reg_names = sorted(watches.keys())
             watches_reg_check = dict((value, key) for key, value in watches.items())
 
             self.assertEquals(watches_expect, watches_reg_names)
