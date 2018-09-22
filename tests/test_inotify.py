@@ -349,6 +349,38 @@ class TestInotifyTree(unittest.TestCase):
 
             self.assertEquals(events, expected)
 
+    def test__moving_readded_folder(self):
+        #test for https://github.com/dsoprea/PyInotify/issues/46
+        #doing no checks of genereated events as current master does
+        #not generate events that should really be expected in this case
+        #avoid having to adjust this - also not implement chcking for expected
+        #wd assignment now..
+        #just check for no exception and expected watches in the end
+        #emulate slow mkdir/rmdir/rename... (because of another unfixed bug and
+        #because this is needed to reproduces issue)
+        with inotify.test_support.temp_path() as path:
+            path1 = os.path.join(path, 'org_folder')
+            path2 = os.path.join(path, 'ren_folder')
+
+            i = inotify.adapters.InotifyTree(path)
+            os.mkdir(path1)
+            events = self.__read_all_events(i)
+            os.rmdir(path1)
+            events = self.__read_all_events(i)
+            os.mkdir(path1)
+            events = self.__read_all_events(i)
+            os.rename(path1, path2)
+            events = self.__read_all_events(i)
+
+            watches = i._i._Inotify__watches
+            watches_reverse = i._i._Inotify__watches_r
+
+            watches_expect = sorted((path,path2))
+            watches_reg_names = sorted(sorted(watches.keys()))
+            watches_reg_check = dict((value, key) for key, value in watches.items())
+
+            self.assertEquals(watches_expect, watches_reg_names)
+            self.assertEquals(watches_reg_check, watches_reverse)
 
 class TestInotifyTrees(unittest.TestCase):
     def __init__(self, *args, **kwargs):
