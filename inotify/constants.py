@@ -32,8 +32,8 @@ IN_ALL_EVENTS    = (IN_ACCESS | IN_MODIFY | IN_ATTRIB | IN_CLOSE_WRITE |
 ## Events sent by kernel.
 
 IN_UNMOUNT    = 0x00002000 # Backing fs was unmounted.
-IN_Q_OVERFLOW = 0x00004000 # Event queued overflowed.
-IN_IGNORED    = 0x00008000 # File was ignored.
+IN_Q_OVERFLOW = 0x00004000 # Event queue overflowed. [inotify fd unusable]
+IN_IGNORED    = 0x00008000 # File was ignored. (=Watch has been removed. [terminal event])
 
 ## Special flags.
 
@@ -42,6 +42,10 @@ IN_DONT_FOLLOW = 0x02000000 # Do not follow a sym link.
 IN_MASK_ADD    = 0x20000000 # Add to the mask of an already existing watch.
 IN_ISDIR       = 0x40000000 # Event occurred against dir.
 IN_ONESHOT     = 0x80000000 # Only send event once.
+
+## All events sent by kernel
+
+X_IN_ALL_EVENTS  = (IN_ALL_EVENTS | IN_UNMOUNT | IN_Q_OVERFLOW | IN_IGNORED)
 
 MASK_LOOKUP = {
     0o2000000: 'IN_CLOEXEC',
@@ -76,3 +80,11 @@ MASK_LOOKUP = {
     0x40000000: 'IN_ISDIR',
     0x80000000: 'IN_ONESHOT',
 }
+
+# Do not optimize away the unspecified combinations for IN_ISDIR
+#  as that would be only very minor performance improvement and
+#  things can change... (IN_ISDIR/IN_ACCESS is also "unspecified"
+#  but happens on some (newer?) kernels)
+MASK_LOOKUP_COMB = dict(((em|dm, [en]+dn)
+                         for em, en in MASK_LOOKUP.items() if em & X_IN_ALL_EVENTS
+                         for dm, dn in ((0, []), (IN_ISDIR, ['IN_ISDIR']))))
