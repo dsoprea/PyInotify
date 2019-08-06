@@ -133,7 +133,15 @@ Notes
 Testing
 =======
 
-Call "test.sh" to run the tests::
+It is possible to run tests using the `setuptools` test target::
+
+    $ python setup.py test
+
+Or you can install `nose`::
+
+    $ pip install nose
+
+Then, call "test.sh" to run the tests::
 
     $ ./test.sh
     test__cycle (tests.test_inotify.TestInotify) ... ok
