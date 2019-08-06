@@ -6,10 +6,10 @@ import inotify
 APP_PATH = os.path.dirname(inotify.__file__)
 
 with open(os.path.join(APP_PATH, 'resources', 'README.rst')) as f:
-      _LONG_DESCRIPTION = f.read()
+    _LONG_DESCRIPTION = f.read()
 
 with open(os.path.join(APP_PATH, 'resources', 'requirements.txt')) as f:
-      _INSTALL_REQUIRES = list(map(lambda s: s.strip(), f.readlines()))
+    _INSTALL_REQUIRES = list(map(lambda s: s.strip(), f.readlines()))
 
 _DESCRIPTION = \
     "An adapter to Linux kernel support for inotify directory-watching."
