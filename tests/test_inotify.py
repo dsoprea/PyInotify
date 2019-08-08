@@ -143,71 +143,46 @@ class TestInotify(unittest.TestCase):
         os.mkdir(path)
         return path
 
-    def test__cycle_init_with_paths_array(self):
+    @staticmethod
+    def _event_general(wd, mask, type_name, path, filename):
+        return ((inotify.adapters._INOTIFY_EVENT(wd=wd, mask=mask, cookie=0, len=16)),
+                [type_name],
+                path,
+                filename)
+
+    @staticmethod
+    def _event_create(wd, path, filename):
+        return TestInotify._event_general(wd, 256, 'IN_CREATE', path, filename)
+
+    @staticmethod
+    def _event_open(wd, path, filename):
+        return TestInotify._event_general(wd, 32, 'IN_OPEN', path, filename)
+
+    @staticmethod
+    def _event_close_write(wd, path, filename):
+        return TestInotify._event_general(wd, 8, 'IN_CLOSE_WRITE', path, filename)
+
+    def test__watch_list_of_paths(self):
         with inotify.test_support.temp_path() as path:
             path1 = TestInotify._make_temp_path(path, 'aa')
             path2 = TestInotify._make_temp_path(path, 'bb')
             i = inotify.adapters.Inotify([path1, path2])
-            with open('ignored_new_file', 'w'):
-                pass
+            TestInotify._open_write_close('ignored_new_file')
             TestInotify._open_write_close(path1, 'seen_new_file')
             TestInotify._open_write_close(path2, 'seen_new_file2')
             os.remove(os.path.join(path1, 'seen_new_file'))
             events = self.__read_all_events(i)
-
             expected = [
-                (
-                    inotify.adapters._INOTIFY_EVENT(wd=1, mask=256, cookie=0, len=16),
-                    ['IN_CREATE'],
-                    path1,
-                    'seen_new_file'
-                ),
-                (
-                    inotify.adapters._INOTIFY_EVENT(wd=1, mask=32, cookie=0, len=16),
-                    ['IN_OPEN'],
-                    path1,
-                    'seen_new_file'
-                ),
-                (
-                    inotify.adapters._INOTIFY_EVENT(wd=1, mask=8, cookie=0, len=16),
-                    ['IN_CLOSE_WRITE'],
-                    path1,
-                    'seen_new_file'
-                ),
-                (
-                    inotify.adapters._INOTIFY_EVENT(wd=2, mask=256, cookie=0, len=16),
-                    ['IN_CREATE'],
-                    path2,
-                    'seen_new_file2'
-                ),
-                (
-                    inotify.adapters._INOTIFY_EVENT(wd=2, mask=32, cookie=0, len=16),
-                    ['IN_OPEN'],
-                    path2,
-                    'seen_new_file2'
-                ),
-                (
-                    inotify.adapters._INOTIFY_EVENT(wd=2, mask=8, cookie=0, len=16),
-                    ['IN_CLOSE_WRITE'],
-                    path2,
-                    'seen_new_file2'
-                ),
-                (
-                    inotify.adapters._INOTIFY_EVENT(wd=1, mask=512, cookie=0, len=16),
-                    ['IN_DELETE'],
-                    path1,
-                    'seen_new_file'
-                )
+                TestInotify._event_create(wd=1, path=path1, filename='seen_new_file'),
+                TestInotify._event_open(wd=1, path=path1, filename='seen_new_file'),
+                TestInotify._event_close_write(wd=1, path=path1, filename='seen_new_file'),
+                TestInotify._event_create(wd=2, path=path2, filename='seen_new_file2'),
+                TestInotify._event_open(wd=2, path=path2, filename='seen_new_file2'),
+                TestInotify._event_close_write(wd=2, path=path2, filename='seen_new_file2'),
+                TestInotify._event_general(wd=1, mask=512, type_name='IN_DELETE',
+                                           path=path1, filename='seen_new_file')
             ]
             self.assertEquals(events, expected)
-
-            # This can't be removed until *after* we've read the events because
-            # they'll be flushed the moment we remove the watch.
-            i.remove_watch(path1)
-
-            TestInotify._open_write_close(path1, 'ignored_after_removal')
-            events = self.__read_all_events(i)
-            self.assertEquals(events, [])
 
     def test__get_event_names(self):
         all_mask = 0
