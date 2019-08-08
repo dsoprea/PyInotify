@@ -7,6 +7,8 @@ import inotify.constants
 import inotify.adapters
 import inotify.test_support
 
+from inotify.calls import InotifyError
+
 try:
     unicode
 except NameError:
@@ -183,6 +185,11 @@ class TestInotify(unittest.TestCase):
                                            path=path1, filename='seen_new_file')
             ]
             self.assertEquals(events, expected)
+
+    def test__error_on_watch_nonexistent_folder(self):
+        i = inotify.adapters.Inotify()
+        with self.assertRaises(InotifyError):
+            i.add_watch('/dev/null/foo')
 
     def test__get_event_names(self):
         all_mask = 0
