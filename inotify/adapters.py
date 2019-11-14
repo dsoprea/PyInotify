@@ -299,7 +299,7 @@ class _BaseTree(object):
 
                         self._i.add_watch(full_path, self._mask)
 
-                    if header.mask & inotify.constants.IN_MOVED_FROM:
+                    if header.mask & inotify.constants.IN_DELETE:
                         _LOGGER.debug("A directory has been removed. We're "
                                       "being recursive, but it would have "
                                       "automatically been deregistered: [%s]",
