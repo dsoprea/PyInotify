@@ -137,7 +137,7 @@ It is possible to run tests using the `setuptools` test target::
 
     $ python setup.py test
 
-Or you can install `nose`::
+Or you can install `nose` use that directly::
 
     $ pip install nose
 
