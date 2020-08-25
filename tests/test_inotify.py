@@ -4,10 +4,9 @@ import os
 import unittest
 
 import inotify.constants
+import inotify.calls
 import inotify.adapters
 import inotify.test_support
-
-from inotify.calls import InotifyError
 
 try:
     unicode
@@ -188,7 +187,7 @@ class TestInotify(unittest.TestCase):
 
     def test__error_on_watch_nonexistent_folder(self):
         i = inotify.adapters.Inotify()
-        with self.assertRaises(InotifyError):
+        with self.assertRaises(inotify.calls.InotifyError):
             i.add_watch('/dev/null/foo')
 
     def test__get_event_names(self):
