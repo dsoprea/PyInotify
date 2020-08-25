@@ -149,7 +149,8 @@ class Inotify(object):
 
         self.__buffer += b
 
-        while 1:
+        i = 0
+        while True:
             length = len(self.__buffer)
 
             if length < _STRUCT_HEADER_LENGTH:
@@ -166,7 +167,8 @@ class Inotify(object):
 
             header = _INOTIFY_EVENT(*header_raw)
             type_names = self._get_event_names(header.mask)
-            _LOGGER.debug("Events received in stream: {}".format(type_names))
+            _LOGGER.debug("{}-{}: Events received in stream: {} HEADER={}".format(
+                          wd, i+1, type_names, header))
 
             event_length = (_STRUCT_HEADER_LENGTH + header.len)
             if length < event_length:
@@ -187,6 +189,8 @@ class Inotify(object):
             buffer_length = len(self.__buffer)
             if buffer_length < _STRUCT_HEADER_LENGTH:
                 break
+
+            i += 1
 
     def event_gen(
             self, timeout_s=None, yield_nones=True, filter_predicate=None,
@@ -221,17 +225,21 @@ class Inotify(object):
 
             # Process events.
 
-            for fd, event_type in events:
+            len_ = len(events)
+            for i, (fd, event_type) in enumerate(events):
                 # (fd) looks to always match the inotify FD.
 
                 names = self._get_event_names(event_type)
-                _LOGGER.debug("Events received from epoll: {}".format(names))
+                _LOGGER.debug("({}/{}) Events received from epoll on descriptor ({}): {}".format(
+                              i+1, len_, fd, names))
 
                 for (header, type_names, path, filename) \
                         in self._handle_inotify_event(fd):
                     last_hit_s = time.time()
+                    type_names = sorted(type_names)
 
                     e = (header, type_names, path, filename)
+
                     for type_name in type_names:
                         if filter_predicate is not None and \
                            filter_predicate(type_name, e) is False:
