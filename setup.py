@@ -35,5 +35,7 @@ setuptools.setup(
             'resources/README.rst',
             'resources/requirements.txt',
         ]
-    }
+    },
+    test_suite='nose.collector',
+    tests_require=['nose'],
 )

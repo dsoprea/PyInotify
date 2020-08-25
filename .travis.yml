@@ -8,6 +8,7 @@ python:
 install:
   - pip install -r requirements.txt
   - pip install coveralls
+  - pip install nose
 script: nosetests -s -v --with-coverage --cover-package=inotify
 after_success:
   - coveralls
