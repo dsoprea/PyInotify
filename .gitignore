@@ -8,3 +8,4 @@
 *.pyc
 /vagrant/.vagrant
 .DS_Store
+/.eggs/
