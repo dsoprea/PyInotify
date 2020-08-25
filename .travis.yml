@@ -9,6 +9,10 @@ python:
 
 install:
   - pip install -r requirements.txt
+
+# NOTE(dustin): Preemptively install a specific version of coverage. We're having issues with the 5.x ones.
+  - pip install coverage==4.5.4
+
   - pip install coveralls
   - pip install nose
 script: nosetests -s -v --with-coverage --cover-package=inotify
