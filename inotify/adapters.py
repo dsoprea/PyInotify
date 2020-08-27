@@ -231,6 +231,9 @@ class Inotify(object):
                         in self._handle_inotify_event(fd):
                     last_hit_s = time.time()
 
+                    if header.mask & inotify.constants.IN_IGNORED:
+                        self.remove_watch(path, superficial=True)
+
                     e = (header, type_names, path, filename)
                     for type_name in type_names:
                         if filter_predicate is not None and \
