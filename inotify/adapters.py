@@ -115,7 +115,7 @@ class Inotify(object):
 
         del self.__watches[path]
 
-        self.remove_watch_with_id(wd, superficial)
+        self.remove_watch_with_id(wd)
 
     def remove_watch_with_id(self, wd, superficial=False):
         del self.__watches_r[wd]
@@ -190,7 +190,7 @@ class Inotify(object):
 
     def event_gen(
             self, timeout_s=None, yield_nones=True, filter_predicate=None,
-            terminal_events=_DEFAULT_TERMINAL_EVENTS, handle_in_ignored=False):
+            terminal_events=_DEFAULT_TERMINAL_EVENTS):
         """Yield one event after another. If `timeout_s` is provided, we'll
         break when no event is received for that many seconds.
         """
@@ -230,10 +230,6 @@ class Inotify(object):
                 for (header, type_names, path, filename) \
                         in self._handle_inotify_event(fd):
                     last_hit_s = time.time()
-
-                    if handle_in_ignored and\
-                            header.mask & inotify.constants.IN_IGNORED:
-                        self.remove_watch(path, superficial=True)
 
                     e = (header, type_names, path, filename)
                     for type_name in type_names:
