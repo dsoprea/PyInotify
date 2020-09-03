@@ -57,8 +57,16 @@ class Inotify(object):
         self.__inotify_fd = inotify.calls.inotify_init()
         _LOGGER.debug("Inotify handle is (%d).", self.__inotify_fd)
 
-        self.__epoll = select.epoll()
-        self.__epoll.register(self.__inotify_fd, select.POLLIN)
+        
+        if hasattr(select, 'epoll'):
+            self.__epoll = select.epoll()
+            self.__epoll.register(self.__inotify_fd, select.POLLIN)
+        elif hasattr(select, 'kqueue'):
+            self.__kqueue = select.kqueue()
+            kevent = select.kevent(self.__inotify_fd,
+                    filter=select.KQ_FILTER_READ,
+                    flags=select.KQ_EV_ADD | select.KQ_EV_ENABLE)
+            self.__kqueue.control([kevent], 0, 0)
 
         self.__last_success_return = None
 
@@ -204,29 +212,7 @@ class Inotify(object):
         while True:
             block_duration_s = self.__get_block_duration()
 
-            # Poll, but manage signal-related errors.
-
-            try:
-                events = self.__epoll.poll(block_duration_s)
-            except IOError as e:
-                if e.errno != EINTR:
-                    raise
-
-                if timeout_s is not None:
-                    time_since_event_s = time.time() - last_hit_s
-                    if time_since_event_s > timeout_s:
-                        break
-
-                continue
-
-            # Process events.
-
-            for fd, event_type in events:
-                # (fd) looks to always match the inotify FD.
-
-                names = self._get_event_names(event_type)
-                _LOGGER.debug("Events received from epoll: {}".format(names))
-
+            def process_fd(fd):
                 for (header, type_names, path, filename) \
                         in self._handle_inotify_event(fd):
                     last_hit_s = time.time()
@@ -241,6 +227,52 @@ class Inotify(object):
                             raise TerminalEventException(type_name, e)
 
                     yield e
+
+            # Poll, but manage signal-related errors.
+
+            if hasattr(select, 'epoll'):
+                try:
+                    events = self.__epoll.poll(block_duration_s)
+                except IOError as e:
+                    if e.errno != EINTR:
+                        raise
+
+                    if timeout_s is not None:
+                        time_since_event_s = time.time() - last_hit_s
+                        if time_since_event_s > timeout_s:
+                            break
+
+                    continue
+
+                # Process events.
+
+                for fd, event_type in events:
+                    # (fd) looks to always match the inotify FD.
+
+                    names = self._get_event_names(event_type)
+                    _LOGGER.debug("Events received from epoll: {}".format(names))
+
+                    yield from process_fd(fd)
+
+
+            elif hasattr(select, 'kqueue'):
+                try:
+                    kevents = self.__kqueue.control(None, 1, block_duration_s)
+                except IOError as e:
+                    if e.errno != EINTR:
+                        raise
+
+                    if timeout_s is not None:
+                        time_since_event_s = time.time() - last_hit_s
+                        if time_since_event_s > timeout_s:
+                            break
+
+                    continue
+
+                # Process kevents
+                for kevent in kevents:
+                    if kevent.filter == select.KQ_FILTER_READ:
+                        yield from process_fd(kevent.ident)
 
             if timeout_s is not None:
                 time_since_event_s = time.time() - last_hit_s
