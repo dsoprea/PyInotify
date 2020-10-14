@@ -110,6 +110,7 @@ This will immediately recurse through the directory tree and add watches on all 
 
 The other differences from the standard functionality:
 
+- You can ignore specific directories with the *ignored_dirs* parameter.
 - You can't remove a watch since watches are automatically managed.
 - Even if you provide a very restrictive mask that doesn't allow for directory create/delete events, the *IN_ISDIR*, *IN_CREATE*, and *IN_DELETE* flags will still be seen.
 
@@ -118,7 +119,9 @@ The other differences from the standard functionality:
 Notes
 =====
 
-- **IMPORTANT:** Recursively monitoring paths is **not** a functionality provided by the kernel. Rather, we artificially implement it. As directory-created events are received, we create watches for the child directories on-the-fly. This means that there is potential for a race condition: if a directory is created and a file or directory is created inside before you (using the `event_gen()` loop) have a chance to observe it, then you are going to have a problem: If it is a file, then you will miss the events related to its creation, but, if it is a directory, then not only will you miss those creation events but this library will also miss them and not be able to add a watch for them. If you are dealing with a **large number of hierarchical directory creations** and have the ability to be aware new directories via a secondary channel with some lead time before any files are populated *into* them, you can take advantage of this and call `add_watch()` manually. In this case there is limited value in using `InotifyTree()`/`InotifyTree()` instead of just `Inotify()` but this choice is left to you.
+- **IMPORTANT:** Recursively monitoring paths is **not** a functionality provided by the kernel. Rather, we artificially implement it. As directory-created events are received, we create watches for the child directories on-the-fly. This means that there is potential for a race condition: if a directory is created and files or directorie are created inside before you (using the `event_gen()` loop) have a chance to observe it, then you are going to miss the events related to them up to the point in time the directory is registered by `event_gen()` loop. If you are dealing with a **large number of hierarchical directory creations** and have the ability to be aware new directories via a secondary channel with some lead time before any files are populated *into* them, you can take advantage of this and call `add_watch()` manually. In this case there would be limited value in using `InotifyTree()`/`InotifyTree()` instead of just `Inotify()` so `add_watch()` is not provided by `InotifyTree()`/`InotifyTree()`.
+
+- For best performance on recursive paths monitoring it is recommended to install *scandir* module if You are using a pre 3.5 Python.
 
 - *epoll* is used to audit for *inotify* kernel events.
 
