@@ -125,6 +125,12 @@ class Inotify(object):
 
             inotify.calls.inotify_rm_watch(self.__inotify_fd, wd)
 
+    def remove_watches(self, superficial=False):
+        for wd in self.__watches.values():
+            self.remove_watch_with_id(wd, superficial)
+
+        self.__watches = {}
+
     def _get_event_names(self, event_type):
         names = []
         for bit, name in inotify.constants.MASK_LOOKUP.items():

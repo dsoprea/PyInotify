@@ -133,6 +133,100 @@ class TestInotify(unittest.TestCase):
             events = self.__read_all_events(i)
             self.assertEquals(events, [])
 
+    def test__remove_watches(self):
+        with inotify.test_support.temp_path() as path:
+            path1 = os.path.join(path, 'aa')
+            os.mkdir(path1)
+
+            path2 = os.path.join(path, 'bb')
+            os.mkdir(path2)
+
+            i = inotify.adapters.Inotify()
+            i.add_watch(path1)
+            i.add_watch(path2)
+
+            with open('ignored_new_file', 'w'):
+                pass
+
+            with open(os.path.join(path1, 'seen_new_file'), 'w'):
+                pass
+
+            os.remove(os.path.join(path1, 'seen_new_file'))
+
+
+            with open(os.path.join(path2, 'seen_new_file'), 'w'):
+                pass
+
+            os.remove(os.path.join(path2, 'seen_new_file'))
+
+            events = self.__read_all_events(i)
+
+            expected = [
+                (
+                    inotify.adapters._INOTIFY_EVENT(wd=1, mask=256, cookie=0, len=16),
+                    ['IN_CREATE'],
+                    path1,
+                    'seen_new_file'
+                ),
+                (
+                    inotify.adapters._INOTIFY_EVENT(wd=1, mask=32, cookie=0, len=16),
+                    ['IN_OPEN'],
+                    path1,
+                    'seen_new_file'
+                ),
+                (
+                    inotify.adapters._INOTIFY_EVENT(wd=1, mask=8, cookie=0, len=16),
+                    ['IN_CLOSE_WRITE'],
+                    path1,
+                    'seen_new_file'
+                ),
+                (
+                    inotify.adapters._INOTIFY_EVENT(wd=1, mask=512, cookie=0, len=16),
+                    ['IN_DELETE'],
+                    path1,
+                    'seen_new_file'
+                ),
+                (
+                    inotify.adapters._INOTIFY_EVENT(wd=1, mask=256, cookie=0, len=16),
+                    ['IN_CREATE'],
+                    path2,
+                    'seen_new_file'
+                ),
+                (
+                    inotify.adapters._INOTIFY_EVENT(wd=1, mask=32, cookie=0, len=16),
+                    ['IN_OPEN'],
+                    path2,
+                    'seen_new_file'
+                ),
+                (
+                    inotify.adapters._INOTIFY_EVENT(wd=1, mask=8, cookie=0, len=16),
+                    ['IN_CLOSE_WRITE'],
+                    path2,
+                    'seen_new_file'
+                ),
+                (
+                    inotify.adapters._INOTIFY_EVENT(wd=1, mask=512, cookie=0, len=16),
+                    ['IN_DELETE'],
+                    path2,
+                    'seen_new_file'
+                )
+            ]
+
+            self.assertEquals(events, expected)
+
+            # This can't be removed until *after* we've read the events because
+            # they'll be flushed the moment we remove the watch.
+            i.remove_watches()
+
+            with open(os.path.join(path1, 'ignored_after_removal'), 'w'):
+                pass
+
+            with open(os.path.join(path2, 'ignored_after_removal'), 'w'):
+                pass
+
+            events = self.__read_all_events(i)
+            self.assertEquals(events, [])
+
     @staticmethod
     def _open_write_close(*args):
         with open(os.path.join(*args), 'w'):
