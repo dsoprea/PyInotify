@@ -34,7 +34,11 @@ _INOTIFY_EVENT = collections.namedtuple(
                     ])
 
 _STRUCT_HEADER_LENGTH = struct.calcsize(_HEADER_STRUCT_FORMAT)
-_IS_DEBUG = bool(int(os.environ.get('DEBUG', '0')))
+
+try:
+    _IS_DEBUG = bool(int(os.environ.get('DEBUG', '0')))
+except ValueError:
+    _IS_DEBUG = False
 
 
 class EventTimeoutException(Exception):
