@@ -18,7 +18,7 @@ Installing
 
 Install via *pip*::
 
-    $ sudo pip install inotify
+    $ sudo -H pip install inotify
 
 
 =======
