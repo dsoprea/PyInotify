@@ -4,6 +4,7 @@ import os
 import struct
 import collections
 import time
+from distutils.util import strtobool
 
 from errno import EINTR
 
@@ -34,7 +35,15 @@ _INOTIFY_EVENT = collections.namedtuple(
                     ])
 
 _STRUCT_HEADER_LENGTH = struct.calcsize(_HEADER_STRUCT_FORMAT)
-_IS_DEBUG = bool(int(os.environ.get('DEBUG', '0')))
+
+def _cast_boolean(value):
+    """
+    Helper to convert config values to boolean as ConfigParser do.
+    """
+    value = str(value)
+    return bool(value) if value == '' else bool(strtobool(value))
+
+_IS_DEBUG = _cast_boolean(os.environ.get('DEBUG', '0'))
 
 
 class EventTimeoutException(Exception):
