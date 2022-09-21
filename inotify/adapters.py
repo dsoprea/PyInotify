@@ -264,7 +264,8 @@ class _BaseTree(object):
         self._mask = mask | \
                         inotify.constants.IN_ISDIR | \
                         inotify.constants.IN_CREATE | \
-                        inotify.constants.IN_DELETE
+                        inotify.constants.IN_DELETE | \
+                        inotify.constants.IN_DELETE_SELF
 
         self._i = Inotify(block_duration_s=block_duration_s)
 
@@ -280,9 +281,16 @@ class _BaseTree(object):
         for event in self._i.event_gen(**kwargs):
             if event is not None:
                 (header, type_names, path, filename) = event
+                full_path = os.path.join(path, filename)
+
+                if header.mask & inotify.constants.IN_DELETE_SELF:
+                    _LOGGER.debug("A monitored file/directory has been removed. We're "
+                                  "being recursive, performing cleanup: [%s]",
+                                  full_path)
+
+                    self._i.remove_watch(full_path, superficial=True)
 
                 if header.mask & inotify.constants.IN_ISDIR:
-                    full_path = os.path.join(path, filename)
 
                     if (
                         (header.mask & inotify.constants.IN_MOVED_TO) or
