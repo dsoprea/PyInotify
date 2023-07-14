@@ -25,7 +25,9 @@ Install via *pip*::
 Example
 =======
 
-Code for monitoring a simple, flat path (see "Recursive Watching" for watching a hierarchical structure)::
+Code for monitoring a simple, flat path (see "Recursive Watching" for watching a hierarchical structure):
+
+.. code-block:: python
 
     import inotify.adapters
 
@@ -60,7 +62,9 @@ Output::
         events = self.__epoll.poll(block_duration_s)
     KeyboardInterrupt
 
-Note that this works quite nicely, but, in the event that you don't want to be driven by the loop, you can also provide a timeout and then even flatten the output of the generator directly to a list::
+Note that this works quite nicely, but, in the event that you don't want to be driven by the loop, you can also provide a timeout and then even flatten the output of the generator directly to a list:
+
+.. code-block:: python
 
     import inotify.adapters
 
@@ -97,7 +101,9 @@ Recursive Watching
 
 There is also the ability to add a recursive watch on a path.
 
-Example::
+Example:
+
+.. code-block:: python
 
     i = inotify.adapters.InotifyTree('/tmp/watch_tree')
 
