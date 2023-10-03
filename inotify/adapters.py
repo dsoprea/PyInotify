@@ -1,11 +1,13 @@
 import logging
 import select
 import os
+import pathlib
 import struct
 import collections
 import time
 
 from errno import EINTR
+from typing import List
 
 import inotify.constants
 import inotify.calls
@@ -296,7 +298,6 @@ class _BaseTree(object):
                                       "adding a watch on it (because we're "
                                       "being recursive): [%s]", full_path)
 
-
                         self._i.add_watch(full_path, self._mask)
 
                     if header.mask & inotify.constants.IN_DELETE:
@@ -323,6 +324,14 @@ class _BaseTree(object):
 
             yield event
 
+    def _load_trees(self, path_list: List[pathlib.Path]):
+        for entry_path in path_list:
+            if entry_path.is_dir():
+                self._i.add_watch(str(entry_path), self._mask)
+                for sub_entry_path in entry_path.rglob('*'):
+                    if sub_entry_path.is_dir():
+                        self._i.add_watch(str(sub_entry_path), self._mask)
+
     @property
     def inotify(self):
         return self._i
@@ -335,31 +344,8 @@ class InotifyTree(_BaseTree):
                  block_duration_s=_DEFAULT_EPOLL_BLOCK_DURATION_S):
         super(InotifyTree, self).__init__(mask=mask, block_duration_s=block_duration_s)
 
-        self.__root_path = path
-
-        self.__load_tree(path)
-
-    def __load_tree(self, path):
         _LOGGER.debug("Adding initial watches on tree: [%s]", path)
-
-        paths = []
-
-        q = [path]
-        while q:
-            current_path = q[0]
-            del q[0]
-
-            paths.append(current_path)
-
-            for filename in os.listdir(current_path):
-                entry_filepath = os.path.join(current_path, filename)
-                if os.path.isdir(entry_filepath) is False:
-                    continue
-
-                q.append(entry_filepath)
-
-        for path in paths:
-            self._i.add_watch(path, self._mask)
+        super()._load_trees([pathlib.Path(path)])
 
 
 class InotifyTrees(_BaseTree):
@@ -369,27 +355,5 @@ class InotifyTrees(_BaseTree):
                  block_duration_s=_DEFAULT_EPOLL_BLOCK_DURATION_S):
         super(InotifyTrees, self).__init__(mask=mask, block_duration_s=block_duration_s)
 
-        self.__load_trees(paths)
-
-    def __load_trees(self, paths):
         _LOGGER.debug("Adding initial watches on trees: [%s]", ",".join(map(str, paths)))
-
-        found = []
-
-        q = paths
-        while q:
-            current_path = q[0]
-            del q[0]
-
-            found.append(current_path)
-
-            for filename in os.listdir(current_path):
-                entry_filepath = os.path.join(current_path, filename)
-                if os.path.isdir(entry_filepath) is False:
-                    continue
-
-                q.append(entry_filepath)
-
-
-        for path in found:
-            self._i.add_watch(path, self._mask)
+        self._load_trees([pathlib.Path(entry) for entry in paths])
