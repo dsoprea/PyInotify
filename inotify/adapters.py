@@ -342,8 +342,13 @@ class InotifyTree(_BaseTree):
     """Recursively watch a path."""
 
     def __init__(self, path, mask=inotify.constants.IN_ALL_EVENTS,
-                 block_duration_s=_DEFAULT_EPOLL_BLOCK_DURATION_S):
-        super(InotifyTree, self).__init__(mask=mask, block_duration_s=block_duration_s)
+                 block_duration_s=_DEFAULT_EPOLL_BLOCK_DURATION_S,
+                 follow_symlinks=False):
+        super(InotifyTree, self).__init__(
+            mask=mask,
+            block_duration_s=block_duration_s,
+            follow_symlinks=follow_symlinks
+        )
         self.__load_tree(path)
 
     def __load_tree(self, path):
@@ -360,8 +365,13 @@ class InotifyTrees(_BaseTree):
     """Recursively watch over a list of trees."""
 
     def __init__(self, paths, mask=inotify.constants.IN_ALL_EVENTS,
-                 block_duration_s=_DEFAULT_EPOLL_BLOCK_DURATION_S):
-        super(InotifyTrees, self).__init__(mask=mask, block_duration_s=block_duration_s)
+                 block_duration_s=_DEFAULT_EPOLL_BLOCK_DURATION_S,
+                 follow_symlinks=False):
+        super(InotifyTrees, self).__init__(
+            mask=mask,
+            block_duration_s=block_duration_s,
+            follow_symlinks=follow_symlinks
+        )
 
         self.__load_trees(paths)
 
