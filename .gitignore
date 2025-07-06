@@ -5,7 +5,10 @@
 /.Python
 /build
 /dist
-*.pyc
 /vagrant/.vagrant
-.DS_Store
 /.eggs/
+
+/.python-version
+
+*.pyc
+.DS_Store
