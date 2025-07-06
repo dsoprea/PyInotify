@@ -352,7 +352,7 @@ class InotifyTree(_BaseTree):
             try:
                 filenames = os.listdir(current_path)
             except FileNotFoundError:
-                _LOGGER.debug("Path %s disappeared before we could list it", current_path)
+                _LOGGER.warning("Path %s disappeared before we could list it", current_path)
                 continue
                 
             paths.append(current_path)
@@ -369,7 +369,7 @@ class InotifyTree(_BaseTree):
                 self._i.add_watch(path, self._mask)
             except inotify.calls.InotifyError as e:
                 if e.errno == ENOENT:
-                    _LOGGER.debug("Path %s disappeared before we could watch it", path)
+                    _LOGGER.warning("Path %s disappeared before we could watch it", path)
                     continue
                 raise                
 
