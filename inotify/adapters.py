@@ -5,7 +5,7 @@ import struct
 import collections
 import time
 
-from errno import EINTR
+from errno import EINTR, ENOENT
 
 import inotify.constants
 import inotify.calls
@@ -349,9 +349,15 @@ class InotifyTree(_BaseTree):
             current_path = q[0]
             del q[0]
 
+            try:
+                filenames = os.listdir(current_path)
+            except FileNotFoundError:
+                _LOGGER.debug("Path %s disappeared before we could list it", current_path)
+                continue
+                
             paths.append(current_path)
 
-            for filename in os.listdir(current_path):
+            for filename in filenames:
                 entry_filepath = os.path.join(current_path, filename)
                 if os.path.isdir(entry_filepath) is False:
                     continue
@@ -359,7 +365,13 @@ class InotifyTree(_BaseTree):
                 q.append(entry_filepath)
 
         for path in paths:
-            self._i.add_watch(path, self._mask)
+            try:
+                self._i.add_watch(path, self._mask)
+            except inotify.calls.InotifyError as e:
+                if e.errno == ENOENT:
+                    _LOGGER.debug("Path %s disappeared before we could watch it", path)
+                    continue
+                raise                
 
 
 class InotifyTrees(_BaseTree):
