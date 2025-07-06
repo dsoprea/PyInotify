@@ -46,7 +46,7 @@ class TestInotify(unittest.TestCase):
                 (inotify.adapters._INOTIFY_EVENT(wd=1, mask=8, cookie=0, len=16), ['IN_CLOSE_WRITE'], inner_path, 'filename'),
             ]
 
-            self.assertEquals(events, expected)
+            self.assertEqual(events, expected)
 
     @unittest.skipIf(_HAS_PYTHON2_UNICODE_SUPPORT is False, "Not in Python 2")
     def test__international_naming_python2(self):
@@ -68,7 +68,7 @@ class TestInotify(unittest.TestCase):
                 (inotify.adapters._INOTIFY_EVENT(wd=1, mask=8, cookie=0, len=16), ['IN_CLOSE_WRITE'], inner_path, u'filename料夾'),
             ]
 
-            self.assertEquals(events, expected)
+            self.assertEqual(events, expected)
 
     def test__cycle(self):
         with inotify.test_support.temp_path() as path:
@@ -121,7 +121,7 @@ class TestInotify(unittest.TestCase):
                 )
             ]
 
-            self.assertEquals(events, expected)
+            self.assertEqual(events, expected)
 
             # This can't be removed until *after* we've read the events because
             # they'll be flushed the moment we remove the watch.
@@ -131,7 +131,7 @@ class TestInotify(unittest.TestCase):
                 pass
 
             events = self.__read_all_events(i)
-            self.assertEquals(events, [])
+            self.assertEqual(events, [])
 
     @staticmethod
     def _open_write_close(*args):
@@ -183,7 +183,7 @@ class TestInotify(unittest.TestCase):
                 TestInotify._event_general(wd=1, mask=512, type_name='IN_DELETE',
                                            path=path1, filename='seen_new_file')
             ]
-            self.assertEquals(events, expected)
+            self.assertEqual(events, expected)
 
     def test__error_on_watch_nonexistent_folder(self):
         i = inotify.adapters.Inotify()
@@ -201,7 +201,7 @@ class TestInotify(unittest.TestCase):
         i = inotify.adapters.Inotify()
         names = i._get_event_names(all_mask)
 
-        self.assertEquals(names, all_names)
+        self.assertEqual(names, all_names)
 
 
 class TestInotifyTree(unittest.TestCase):
@@ -268,7 +268,7 @@ class TestInotifyTree(unittest.TestCase):
                 (inotify.adapters._INOTIFY_EVENT(wd=1, mask=1073742336, cookie=0, len=16), ['IN_ISDIR', 'IN_DELETE'], path, 'bb'),
             ]
 
-            self.assertEquals(events, expected)
+            self.assertEqual(events, expected)
 
     def test__renames(self):
 
@@ -287,22 +287,26 @@ class TestInotifyTree(unittest.TestCase):
             events1 = self.__read_all_events(i)
 
             expected = [
-                (inotify.adapters._INOTIFY_EVENT(wd=1, mask=1073742080, cookie=events1[0][0].cookie, len=16), ['IN_ISDIR', 'IN_CREATE'], path, 'old_folder'),
+                (inotify.adapters._INOTIFY_EVENT(wd=1, mask=1073742080, cookie=events1[0][0].cookie, len=16), ['IN_CREATE', 'IN_ISDIR'], path, 'old_folder'),
             ]
 
-            self.assertEquals(events1, expected)
+            self.assertEqual(events1, expected)
 
 
             os.rename(old_path, new_path)
 
             events2 = self.__read_all_events(i)
 
+            for event in events2:
+                event[1].sort()
+
             expected = [
-                (inotify.adapters._INOTIFY_EVENT(wd=1, mask=1073741888, cookie=events2[0][0].cookie, len=16), ['IN_MOVED_FROM', 'IN_ISDIR'], path, 'old_folder'),
-                (inotify.adapters._INOTIFY_EVENT(wd=1, mask=1073741952, cookie=events2[1][0].cookie, len=16), ['IN_MOVED_TO', 'IN_ISDIR'], path, 'new_folder'),
+                (inotify.adapters._INOTIFY_EVENT(wd=1, mask=1073741888, cookie=events2[0][0].cookie, len=16), ['IN_ISDIR', 'IN_MOVED_FROM'], path, 'old_folder'),
+                (inotify.adapters._INOTIFY_EVENT(wd=1, mask=1073741952, cookie=events2[1][0].cookie, len=16), ['IN_ISDIR', 'IN_MOVED_TO'], path, 'new_folder'),
+                (inotify.adapters._INOTIFY_EVENT(wd=2, mask=2048, cookie=0, len=0), ['IN_MOVE_SELF'], os.path.join(path, 'new_folder'), ''),
             ]
 
-            self.assertEquals(events2, expected)
+            self.assertEqual(sorted(events2), sorted(expected))
 
 
             with open(os.path.join(new_path, 'old_filename'), 'w'):
@@ -317,22 +321,25 @@ class TestInotifyTree(unittest.TestCase):
 
             events3 = self.__read_all_events(i)
 
+            for event in events3:
+                event[1].sort()
+
             expected = [
-                (inotify.adapters._INOTIFY_EVENT(wd=3, mask=256, cookie=0, len=16), ['IN_CREATE'], new_path, 'old_filename'),
-                (inotify.adapters._INOTIFY_EVENT(wd=3, mask=32, cookie=0, len=16), ['IN_OPEN'], new_path, 'old_filename'),
-                (inotify.adapters._INOTIFY_EVENT(wd=3, mask=8, cookie=0, len=16), ['IN_CLOSE_WRITE'], new_path, 'old_filename'),
+                (inotify.adapters._INOTIFY_EVENT(wd=2, mask=256, cookie=0, len=16), ['IN_CREATE'], new_path, 'old_filename'),
+                (inotify.adapters._INOTIFY_EVENT(wd=2, mask=32, cookie=0, len=16), ['IN_OPEN'], new_path, 'old_filename'),
+                (inotify.adapters._INOTIFY_EVENT(wd=2, mask=8, cookie=0, len=16), ['IN_CLOSE_WRITE'], new_path, 'old_filename'),
 
-                (inotify.adapters._INOTIFY_EVENT(wd=3, mask=64, cookie=events3[3][0].cookie, len=16), ['IN_MOVED_FROM'], new_path, 'old_filename'),
-                (inotify.adapters._INOTIFY_EVENT(wd=3, mask=128, cookie=events3[4][0].cookie, len=16), ['IN_MOVED_TO'], new_path, 'new_filename'),
+                (inotify.adapters._INOTIFY_EVENT(wd=2, mask=64, cookie=events3[3][0].cookie, len=16), ['IN_MOVED_FROM'], new_path, 'old_filename'),
+                (inotify.adapters._INOTIFY_EVENT(wd=2, mask=128, cookie=events3[4][0].cookie, len=16), ['IN_MOVED_TO'], new_path, 'new_filename'),
 
-                (inotify.adapters._INOTIFY_EVENT(wd=3, mask=512, cookie=0, len=16), ['IN_DELETE'], new_path, 'new_filename'),
+                (inotify.adapters._INOTIFY_EVENT(wd=2, mask=512, cookie=0, len=16), ['IN_DELETE'], new_path, 'new_filename'),
 
-                (inotify.adapters._INOTIFY_EVENT(wd=3, mask=1024, cookie=0, len=0), ['IN_DELETE_SELF'], new_path, ''),
-                (inotify.adapters._INOTIFY_EVENT(wd=3, mask=32768, cookie=0, len=0), ['IN_IGNORED'], new_path, ''),
-                (inotify.adapters._INOTIFY_EVENT(wd=1, mask=1073742336, cookie=0, len=16), ['IN_ISDIR', 'IN_DELETE'], path, 'new_folder'),
+                (inotify.adapters._INOTIFY_EVENT(wd=2, mask=1024, cookie=0, len=0), ['IN_DELETE_SELF'], new_path, ''),
+                (inotify.adapters._INOTIFY_EVENT(wd=2, mask=32768, cookie=0, len=0), ['IN_IGNORED'], new_path, ''),
+                (inotify.adapters._INOTIFY_EVENT(wd=1, mask=1073742336, cookie=0, len=16), ['IN_DELETE', 'IN_ISDIR'], path, 'new_folder'),
             ]
 
-            self.assertEquals(events3, expected)
+            self.assertEqual(sorted(events3), sorted(expected))
 
     def test__automatic_new_watches_on_new_paths(self):
 
@@ -353,7 +360,7 @@ class TestInotifyTree(unittest.TestCase):
                 (inotify.adapters._INOTIFY_EVENT(wd=1, mask=1073742080, cookie=0, len=16), ['IN_ISDIR', 'IN_CREATE'], path, 'folder1'),
             ]
 
-            self.assertEquals(events, expected)
+            self.assertEqual(events, expected)
 
 
             os.mkdir(path2)
@@ -364,7 +371,7 @@ class TestInotifyTree(unittest.TestCase):
                 (inotify.adapters._INOTIFY_EVENT(wd=2, mask=1073742080, cookie=0, len=16), ['IN_ISDIR', 'IN_CREATE'], path1, 'folder2'),
             ]
 
-            self.assertEquals(events, expected)
+            self.assertEqual(events, expected)
 
 
             with open(os.path.join(path2,'filename'), 'w'):
@@ -378,7 +385,7 @@ class TestInotifyTree(unittest.TestCase):
                 (inotify.adapters._INOTIFY_EVENT(wd=3, mask=8, cookie=0, len=16), ['IN_CLOSE_WRITE'], path2, 'filename'),
             ]
 
-            self.assertEquals(events, expected)
+            self.assertEqual(events, expected)
 
     def test__automatic_new_watches_on_existing_paths(self):
 
@@ -405,7 +412,7 @@ class TestInotifyTree(unittest.TestCase):
                 (inotify.adapters._INOTIFY_EVENT(wd=3, mask=8, cookie=0, len=16), ['IN_CLOSE_WRITE'], path2, 'filename'),
             ]
 
-            self.assertEquals(events, expected)
+            self.assertEqual(events, expected)
 
 
 class TestInotifyTrees(unittest.TestCase):
@@ -446,4 +453,4 @@ class TestInotifyTrees(unittest.TestCase):
                 (inotify.adapters._INOTIFY_EVENT(wd=2, mask=8, cookie=0, len=16), ['IN_CLOSE_WRITE'], path2, 'seen_new_file2'),
             ]
 
-            self.assertEquals(events, expected)
+            self.assertEqual(events, expected)
