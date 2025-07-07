@@ -1,7 +1,7 @@
 import setuptools
 import os
 
-with open(os.path.join('inotify', 'resources', 'README.rst')) as f:
+with open(os.path.join('inotify', 'resources', 'README.md')) as f:
     _LONG_DESCRIPTION = f.read()
 
 with open(os.path.join('inotify', 'resources', 'requirements.txt')) as f:
@@ -15,8 +15,7 @@ setuptools.setup(
     version='0.2.11',
     description=_DESCRIPTION,
     long_description=_LONG_DESCRIPTION,
-    classifiers=[
-    ],
+    long_description_content_type='text/markdown',
     keywords='inotify',
     author='Dustin Oprea',
     author_email='myselfasunder@gmail.com',
@@ -28,7 +27,7 @@ setuptools.setup(
     install_requires=_INSTALL_REQUIRES,
     package_data={
         'inotify': [
-            'resources/README.rst',
+            'resources/README.md',
             'resources/requirements.txt',
         ]
     },

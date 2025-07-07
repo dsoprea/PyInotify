@@ -1,9 +1,6 @@
-|Build\_Status|
-|Coverage\_Status|
+[![Unit Testing](https://github.com/dsoprea/PyInotify/actions/workflows/push_event_workflow.yml/badge.svg)](https://github.com/dsoprea/PyInotify/actions/workflows/push_event_workflow.yml)
 
-========
-Overview
-========
+# Overview
 
 *inotify* functionality is available from the Linux kernel and allows you to register one or more directories for watching, and to simply block and wait for notification events. This is obviously far more efficient than polling one or more directories to determine if anything has changed. This is available in the Linux kernel as of version 2.6 .
 
@@ -12,105 +9,103 @@ We've designed this library to act as a generator. All you have to do is loop, a
 **This project is unrelated to the *PyInotify* project that existed prior to this one (this project began in 2015). That project is defunct and no longer available.**
 
 
-==========
-Installing
-==========
+# Installing
 
-Install via *pip*::
+Install via *pip*:
 
-    $ sudo pip install inotify
+```
+$ sudo pip install inotify
+```
 
 
-=======
-Example
-=======
+# Example
 
 Code for monitoring a simple, flat path (see "Recursive Watching" for watching a hierarchical structure):
+```python
+import inotify.adapters
 
-.. code-block:: python
+def _main():
+    i = inotify.adapters.Inotify()
 
-    import inotify.adapters
+    i.add_watch('/tmp')
 
-    def _main():
-        i = inotify.adapters.Inotify()
+    with open('/tmp/test_file', 'w'):
+        pass
 
-        i.add_watch('/tmp')
+    for event in i.event_gen(yield_nones=False):
+        (_, type_names, path, filename) = event
 
-        with open('/tmp/test_file', 'w'):
-            pass
+        print("PATH=[{}] FILENAME=[{}] EVENT_TYPES={}".format(
+              path, filename, type_names))
 
-        for event in i.event_gen(yield_nones=False):
-            (_, type_names, path, filename) = event
+if __name__ == '__main__':
+    _main()
+```
 
-            print("PATH=[{}] FILENAME=[{}] EVENT_TYPES={}".format(
-                  path, filename, type_names))
-
-    if __name__ == '__main__':
-        _main()
-
-Output::
-
-    PATH=[/tmp] FILENAME=[test_file] EVENT_TYPES=['IN_MODIFY']
-    PATH=[/tmp] FILENAME=[test_file] EVENT_TYPES=['IN_OPEN']
-    PATH=[/tmp] FILENAME=[test_file] EVENT_TYPES=['IN_CLOSE_WRITE']
-    ^CTraceback (most recent call last):
-      File "inotify_test.py", line 18, in <module>
-        _main()
-      File "inotify_test.py", line 11, in _main
-        for event in i.event_gen(yield_nones=False):
-      File "/home/dustin/development/python/pyinotify/inotify/adapters.py", line 202, in event_gen
-        events = self.__epoll.poll(block_duration_s)
-    KeyboardInterrupt
+Output:
+```
+PATH=[/tmp] FILENAME=[test_file] EVENT_TYPES=['IN_MODIFY']
+PATH=[/tmp] FILENAME=[test_file] EVENT_TYPES=['IN_OPEN']
+PATH=[/tmp] FILENAME=[test_file] EVENT_TYPES=['IN_CLOSE_WRITE']
+^CTraceback (most recent call last):
+  File "inotify_test.py", line 18, in <module>
+    _main()
+  File "inotify_test.py", line 11, in _main
+    for event in i.event_gen(yield_nones=False):
+  File "/home/dustin/development/python/pyinotify/inotify/adapters.py", line 202, in event_gen
+    events = self.__epoll.poll(block_duration_s)
+KeyboardInterrupt
+```
 
 Note that this works quite nicely, but, in the event that you don't want to be driven by the loop, you can also provide a timeout and then even flatten the output of the generator directly to a list:
 
-.. code-block:: python
+```python
+import inotify.adapters
 
-    import inotify.adapters
+def _main():
+    i = inotify.adapters.Inotify()
 
-    def _main():
-        i = inotify.adapters.Inotify()
+    i.add_watch('/tmp')
 
-        i.add_watch('/tmp')
+    with open('/tmp/test_file', 'w'):
+        pass
 
-        with open('/tmp/test_file', 'w'):
-            pass
+    events = i.event_gen(yield_nones=False, timeout_s=1)
+    events = list(events)
 
-        events = i.event_gen(yield_nones=False, timeout_s=1)
-        events = list(events)
+    print(events)
 
-        print(events)
+if __name__ == '__main__':
+    _main()
+```
 
-    if __name__ == '__main__':
-        _main()
+This will return everything that's happened since the last time you ran it (artificially formatted here):
 
-This will return everything that's happened since the last time you ran it (artificially formatted here)::
-
-    [
-        (_INOTIFY_EVENT(wd=1, mask=2, cookie=0, len=16), ['IN_MODIFY'], '/tmp', u'test_file'),
-        (_INOTIFY_EVENT(wd=1, mask=32, cookie=0, len=16), ['IN_OPEN'], '/tmp', u'test_file'),
-        (_INOTIFY_EVENT(wd=1, mask=8, cookie=0, len=16), ['IN_CLOSE_WRITE'], '/tmp', u'test_file')
-    ]
+```python
+[
+    (_INOTIFY_EVENT(wd=1, mask=2, cookie=0, len=16), ['IN_MODIFY'], '/tmp', u'test_file'),
+    (_INOTIFY_EVENT(wd=1, mask=32, cookie=0, len=16), ['IN_OPEN'], '/tmp', u'test_file'),
+    (_INOTIFY_EVENT(wd=1, mask=8, cookie=0, len=16), ['IN_CLOSE_WRITE'], '/tmp', u'test_file')
+]
+```
 
 **Note that the event-loop will automatically register new directories to be watched, so, if you will create new directories and then potentially delete them, between calls, and are only retrieving the events in batches (like above) then you might experience issues. See the parameters for `event_gen()` for options to handle this scenario.**
 
 
-==================
-Recursive Watching
-==================
+# Recursive Watching
 
 There is also the ability to add a recursive watch on a path.
 
 Example:
 
-.. code-block:: python
+```python
+i = inotify.adapters.InotifyTree('/tmp/watch_tree')
 
-    i = inotify.adapters.InotifyTree('/tmp/watch_tree')
+for event in i.event_gen():
+    # Do stuff...
 
-    for event in i.event_gen():
-        # Do stuff...
-
-        pass
+    pass
+```
 
 This will immediately recurse through the directory tree and add watches on all subdirectories. New directories will automatically have watches added for them and deleted directories will be cleaned-up.
 
@@ -120,9 +115,7 @@ The other differences from the standard functionality:
 - Even if you provide a very restrictive mask that doesn't allow for directory create/delete events, the *IN_ISDIR*, *IN_CREATE*, and *IN_DELETE* flags will still be seen.
 
 
-=====
-Notes
-=====
+# Notes
 
 - **IMPORTANT:** Recursively monitoring paths is **not** a functionality provided by the kernel. Rather, we artificially implement it. As directory-created events are received, we create watches for the child directories on-the-fly. This means that there is potential for a race condition: if a directory is created and a file or directory is created inside before you (using the `event_gen()` loop) have a chance to observe it, then you are going to have a problem: If it is a file, then you will miss the events related to its creation, but, if it is a directory, then not only will you miss those creation events but this library will also miss them and not be able to add a watch for them. If you are dealing with a **large number of hierarchical directory creations** and have the ability to be aware new directories via a secondary channel with some lead time before any files are populated *into* them, you can take advantage of this and call `add_watch()` manually. In this case there is limited value in using `InotifyTree()`/`InotifyTree()` instead of just `Inotify()` but this choice is left to you.
 
@@ -135,16 +128,11 @@ Notes
 - Calling `remove_watch()` is not strictly necessary. The *inotify* resources is automatically cleaned-up, which would clean-up all watch resources as well.
 
 
-=======
-Testing
-=======
+# Testing
 
-Install the testing dependencies and use nose2 to run the tests::
+Install the testing dependencies and use nose2 to run the tests:
 
-    $ pip install -r requirements-testing.txt
-    $ ./test.sh
-
-.. |Build_Status| image:: https://travis-ci.org/dsoprea/PyInotify.svg?branch=master
-   :target: https://travis-ci.org/dsoprea/PyInotify
-.. |Coverage_Status| image:: https://coveralls.io/repos/github/dsoprea/PyInotify/badge.svg?branch=master
-   :target: https://coveralls.io/github/dsoprea/PyInotify?branch=master
+```
+$ pip install -r requirements-testing.txt
+$ ./test.sh
+```
