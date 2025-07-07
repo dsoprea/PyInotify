@@ -1,4 +1,4 @@
-[![Unit Testing](https://github.com/dsoprea/PyInotify/actions/workflows/push_event_workflow.yml/badge.svg)](https://github.com/dsoprea/PyInotify/actions/workflows/push_event_workflow.yml)
+[![Unit Tests](https://github.com/dsoprea/PyInotify/actions/workflows/push_event_workflow.yml/badge.svg)](https://github.com/dsoprea/PyInotify/actions/workflows/push_event_workflow.yml)
 
 # Overview
 

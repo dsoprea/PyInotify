@@ -1,4 +1,4 @@
-name: Run unit-tests
+name: Unit Tests
 on: push
 
 jobs:
@@ -17,7 +17,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name : Install
+    - name : Install project
       run : pip install -e .
 
     - name : Install testing requirements
@@ -26,5 +26,5 @@ jobs:
     - name : Run tests
       run : nose2 -v
 
-    - name : Run tests
+    - name : Run build
       run : python3 -m build
