@@ -1,14 +1,10 @@
 import setuptools
 import os
 
-import inotify
-
-APP_PATH = os.path.dirname(inotify.__file__)
-
-with open(os.path.join(APP_PATH, 'resources', 'README.rst')) as f:
+with open(os.path.join('inotify', 'resources', 'README.rst')) as f:
     _LONG_DESCRIPTION = f.read()
 
-with open(os.path.join(APP_PATH, 'resources', 'requirements.txt')) as f:
+with open(os.path.join('inotify', 'resources', 'requirements.txt')) as f:
     _INSTALL_REQUIRES = list(map(lambda s: s.strip(), f.readlines()))
 
 _DESCRIPTION = \
@@ -16,7 +12,7 @@ _DESCRIPTION = \
 
 setuptools.setup(
     name='inotify',
-    version=inotify.__version__,
+    version='0.2.10',
     description=_DESCRIPTION,
     long_description=_LONG_DESCRIPTION,
     classifiers=[
@@ -36,6 +32,4 @@ setuptools.setup(
             'resources/requirements.txt',
         ]
     },
-    test_suite='nose.collector',
-    tests_require=['nose'],
 )
