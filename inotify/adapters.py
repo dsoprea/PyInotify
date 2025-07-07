@@ -297,7 +297,7 @@ class _BaseTree(object):
                                       "being recursive): [%s]", full_path)
 
 
-                        self._i.add_watch(full_path, self._mask)
+                        self._load_tree(full_path)
 
                     if header.mask & inotify.constants.IN_DELETE:
                         _LOGGER.debug("A directory has been removed. We're "
@@ -327,20 +327,7 @@ class _BaseTree(object):
     def inotify(self):
         return self._i
 
-
-class InotifyTree(_BaseTree):
-    """Recursively watch a path."""
-
-    def __init__(self, path, mask=inotify.constants.IN_ALL_EVENTS,
-                 block_duration_s=_DEFAULT_EPOLL_BLOCK_DURATION_S):
-        super(InotifyTree, self).__init__(mask=mask, block_duration_s=block_duration_s)
-
-        self.__root_path = path
-
-        self.__load_tree(path)
-
-    def __load_tree(self, path):
-        _LOGGER.debug("Adding initial watches on tree: [%s]", path)
+    def _load_tree(self, path):
 
         paths = []
 
@@ -374,6 +361,22 @@ class InotifyTree(_BaseTree):
                 raise                
 
 
+class InotifyTree(_BaseTree):
+    """Recursively watch a path."""
+
+    def __init__(self, path, mask=inotify.constants.IN_ALL_EVENTS,
+                 block_duration_s=_DEFAULT_EPOLL_BLOCK_DURATION_S):
+        super(InotifyTree, self).__init__(mask=mask, block_duration_s=block_duration_s)
+
+        self.__root_path = path
+
+        self.__load_tree(path)
+
+    def __load_tree(self, path):
+        _LOGGER.debug("Adding initial watches on tree: [%s]", path)
+        return self._load_tree(path)
+
+
 class InotifyTrees(_BaseTree):
     """Recursively watch over a list of trees."""
 
@@ -385,23 +388,5 @@ class InotifyTrees(_BaseTree):
 
     def __load_trees(self, paths):
         _LOGGER.debug("Adding initial watches on trees: [%s]", ",".join(map(str, paths)))
-
-        found = []
-
-        q = paths
-        while q:
-            current_path = q[0]
-            del q[0]
-
-            found.append(current_path)
-
-            for filename in os.listdir(current_path):
-                entry_filepath = os.path.join(current_path, filename)
-                if os.path.isdir(entry_filepath) is False:
-                    continue
-
-                q.append(entry_filepath)
-
-
-        for path in found:
-            self._i.add_watch(path, self._mask)
+        for path in paths:
+            self._load_tree(path)
