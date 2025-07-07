@@ -1,5 +1,6 @@
 import logging
 import ctypes
+import os
 
 import inotify.library
 
@@ -10,10 +11,25 @@ _LIB = inotify.library.instance
 
 class InotifyError(Exception):
     def __init__(self, message, *args, **kwargs):
-        self.errno = ctypes.get_errno()
-        message += " ERRNO=(%d)" % (self.errno,)
+        self._errno = ctypes.get_errno()
+
+        try:
+            self._errmsg = os.strerror(self.errno)
+        except:
+            self._errmsg = ''
+
+        message += " ERRNO=({}) [{}]".format(self._errno, self._errmsg)
 
         super(InotifyError, self).__init__(message, *args, **kwargs)
+
+    @property
+    def errno(self):
+        return self._errno
+
+    @property
+    def errmsg(self):
+        return self._errmsg
+
 
 def _check_zero(result):
     if result != 0:

@@ -3,6 +3,7 @@
 import os
 import unittest
 import collections
+import errno
 
 import inotify.constants
 import inotify.calls
@@ -217,8 +218,16 @@ class TestInotify(unittest.TestCase):
 
     def test__error_on_watch_nonexistent_folder(self):
         i = inotify.adapters.Inotify()
-        with self.assertRaises(inotify.calls.InotifyError):
+
+        try:
             i.add_watch('/dev/null/foo')
+
+        except inotify.calls.InotifyError as ie:
+            self.assertEqual(ie.errno, errno.ENOTDIR)
+            self.assertEqual(ie.errmsg, 'Not a directory')
+
+        else:
+            raise Exception("Expected exception.")
 
     def test__get_event_names(self):
         all_mask = 0
