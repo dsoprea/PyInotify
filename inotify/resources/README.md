@@ -1,5 +1,7 @@
 [![Unit Tests](https://github.com/dsoprea/PyInotify/actions/workflows/push_event_workflow.yml/badge.svg)](https://github.com/dsoprea/PyInotify/actions/workflows/push_event_workflow.yml)
 
+![PyPI - Version](https://img.shields.io/pypi/v/inotify)
+
 # Overview
 
 *inotify* functionality is available from the Linux kernel and allows you to register one or more directories for watching, and to simply block and wait for notification events. This is obviously far more efficient than polling one or more directories to determine if anything has changed. This is available in the Linux kernel as of version 2.6 .
