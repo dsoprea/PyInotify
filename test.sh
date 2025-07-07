@@ -1,1 +1,1 @@
-nosetests -s -v tests
+nose2 -v

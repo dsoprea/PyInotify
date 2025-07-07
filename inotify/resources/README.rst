@@ -139,31 +139,10 @@ Notes
 Testing
 =======
 
-It is possible to run tests using the `setuptools` test target::
+Install the testing dependencies and use nose2 to run the tests::
 
-    $ python setup.py test
-
-Or you can install `nose` and use that directly::
-
-    $ pip install nose
-
-Then, call "test.sh" to run the tests::
-
+    $ pip install -r requirements-testing.txt
     $ ./test.sh
-    test__cycle (tests.test_inotify.TestInotify) ... ok
-    test__get_event_names (tests.test_inotify.TestInotify) ... ok
-    test__international_naming_python2 (tests.test_inotify.TestInotify) ... SKIP: Not in Python 2
-    test__international_naming_python3 (tests.test_inotify.TestInotify) ... ok
-    test__automatic_new_watches_on_existing_paths (tests.test_inotify.TestInotifyTree) ... ok
-    test__automatic_new_watches_on_new_paths (tests.test_inotify.TestInotifyTree) ... ok
-    test__cycle (tests.test_inotify.TestInotifyTree) ... ok
-    test__renames (tests.test_inotify.TestInotifyTree) ... ok
-    test__cycle (tests.test_inotify.TestInotifyTrees) ... ok
-
-    ----------------------------------------------------------------------
-    Ran 9 tests in 12.039s
-
-    OK (SKIP=1)
 
 .. |Build_Status| image:: https://travis-ci.org/dsoprea/PyInotify.svg?branch=master
    :target: https://travis-ci.org/dsoprea/PyInotify
