@@ -2,6 +2,7 @@
 
 import os
 import unittest
+import collections
 
 import inotify.constants
 import inotify.calls
@@ -14,6 +15,35 @@ except NameError:
     _HAS_PYTHON2_UNICODE_SUPPORT = False
 else:
     _HAS_PYTHON2_UNICODE_SUPPORT = True
+
+
+_INOTIFY_EVENT__NO_WD = \
+    collections.namedtuple(
+        '_INOTIFY_EVENT__NO_WD',
+        [
+            'mask',
+            'cookie',
+            'len',
+        ])
+
+
+def _strip_wd(events):
+    """The descriptors are nondeterministic, so we need to remove them from the
+    comparisons in order to stabilize testing.
+    """
+
+# TOOD(dustin): We've only currently implemented this in the tests that have required it
+
+    events_stripped = []
+    for header, type_names, path, filename in events:
+        data = header._asdict()
+        del data['wd']
+
+        header_stripped = _INOTIFY_EVENT__NO_WD(**data)
+        events_stripped.append((header_stripped, type_names, path, filename))
+
+
+    return events_stripped
 
 
 class TestInotify(unittest.TestCase):
@@ -241,34 +271,35 @@ class TestInotifyTree(unittest.TestCase):
             os.rmdir(path2)
 
             events = self.__read_all_events(i)
+            events_stripped = _strip_wd(events)
 
             expected = [
-                (inotify.adapters._INOTIFY_EVENT(wd=1, mask=256, cookie=0, len=16), ['IN_CREATE'], path, 'seen_new_file1'),
-                (inotify.adapters._INOTIFY_EVENT(wd=1, mask=32, cookie=0, len=16), ['IN_OPEN'], path, 'seen_new_file1'),
-                (inotify.adapters._INOTIFY_EVENT(wd=1, mask=8, cookie=0, len=16), ['IN_CLOSE_WRITE'], path, 'seen_new_file1'),
+                (_INOTIFY_EVENT__NO_WD(mask=256, cookie=0, len=16), ['IN_CREATE'], path, 'seen_new_file1'),
+                (_INOTIFY_EVENT__NO_WD(mask=32, cookie=0, len=16), ['IN_OPEN'], path, 'seen_new_file1'),
+                (_INOTIFY_EVENT__NO_WD(mask=8, cookie=0, len=16), ['IN_CLOSE_WRITE'], path, 'seen_new_file1'),
 
-                (inotify.adapters._INOTIFY_EVENT(wd=2, mask=256, cookie=0, len=16), ['IN_CREATE'], path1, 'seen_new_file2'),
-                (inotify.adapters._INOTIFY_EVENT(wd=2, mask=32, cookie=0, len=16), ['IN_OPEN'], path1, 'seen_new_file2'),
-                (inotify.adapters._INOTIFY_EVENT(wd=2, mask=8, cookie=0, len=16), ['IN_CLOSE_WRITE'], path1, 'seen_new_file2'),
+                (_INOTIFY_EVENT__NO_WD(mask=256, cookie=0, len=16), ['IN_CREATE'], path1, 'seen_new_file2'),
+                (_INOTIFY_EVENT__NO_WD(mask=32, cookie=0, len=16), ['IN_OPEN'], path1, 'seen_new_file2'),
+                (_INOTIFY_EVENT__NO_WD(mask=8, cookie=0, len=16), ['IN_CLOSE_WRITE'], path1, 'seen_new_file2'),
 
-                (inotify.adapters._INOTIFY_EVENT(wd=3, mask=256, cookie=0, len=16), ['IN_CREATE'], path2, 'seen_new_file3'),
-                (inotify.adapters._INOTIFY_EVENT(wd=3, mask=32, cookie=0, len=16), ['IN_OPEN'], path2, 'seen_new_file3'),
-                (inotify.adapters._INOTIFY_EVENT(wd=3, mask=8, cookie=0, len=16), ['IN_CLOSE_WRITE'], path2, 'seen_new_file3'),
+                (_INOTIFY_EVENT__NO_WD(mask=256, cookie=0, len=16), ['IN_CREATE'], path2, 'seen_new_file3'),
+                (_INOTIFY_EVENT__NO_WD(mask=32, cookie=0, len=16), ['IN_OPEN'], path2, 'seen_new_file3'),
+                (_INOTIFY_EVENT__NO_WD(mask=8, cookie=0, len=16), ['IN_CLOSE_WRITE'], path2, 'seen_new_file3'),
 
-                (inotify.adapters._INOTIFY_EVENT(wd=1, mask=512, cookie=0, len=16), ['IN_DELETE'], path, 'seen_new_file1'),
-                (inotify.adapters._INOTIFY_EVENT(wd=2, mask=512, cookie=0, len=16), ['IN_DELETE'], path1, 'seen_new_file2'),
-                (inotify.adapters._INOTIFY_EVENT(wd=3, mask=512, cookie=0, len=16), ['IN_DELETE'], path2, 'seen_new_file3'),
+                (_INOTIFY_EVENT__NO_WD(mask=512, cookie=0, len=16), ['IN_DELETE'], path, 'seen_new_file1'),
+                (_INOTIFY_EVENT__NO_WD(mask=512, cookie=0, len=16), ['IN_DELETE'], path1, 'seen_new_file2'),
+                (_INOTIFY_EVENT__NO_WD(mask=512, cookie=0, len=16), ['IN_DELETE'], path2, 'seen_new_file3'),
 
-                (inotify.adapters._INOTIFY_EVENT(wd=2, mask=1024, cookie=0, len=0), ['IN_DELETE_SELF'], path1, ''),
-                (inotify.adapters._INOTIFY_EVENT(wd=2, mask=32768, cookie=0, len=0), ['IN_IGNORED'], path1, ''),
-                (inotify.adapters._INOTIFY_EVENT(wd=1, mask=1073742336, cookie=0, len=16), ['IN_ISDIR', 'IN_DELETE'], path, 'aa'),
+                (_INOTIFY_EVENT__NO_WD(mask=1024, cookie=0, len=0), ['IN_DELETE_SELF'], path1, ''),
+                (_INOTIFY_EVENT__NO_WD(mask=32768, cookie=0, len=0), ['IN_IGNORED'], path1, ''),
+                (_INOTIFY_EVENT__NO_WD(mask=1073742336, cookie=0, len=16), ['IN_DELETE', 'IN_ISDIR'], path, 'aa'),
 
-                (inotify.adapters._INOTIFY_EVENT(wd=3, mask=1024, cookie=0, len=0), ['IN_DELETE_SELF'], path2, ''),
-                (inotify.adapters._INOTIFY_EVENT(wd=3, mask=32768, cookie=0, len=0), ['IN_IGNORED'], path2, ''),
-                (inotify.adapters._INOTIFY_EVENT(wd=1, mask=1073742336, cookie=0, len=16), ['IN_DELETE', 'IN_ISDIR'], path, 'bb'),
+                (_INOTIFY_EVENT__NO_WD(mask=1024, cookie=0, len=0), ['IN_DELETE_SELF'], path2, ''),
+                (_INOTIFY_EVENT__NO_WD(mask=32768, cookie=0, len=0), ['IN_IGNORED'], path2, ''),
+                (_INOTIFY_EVENT__NO_WD(mask=1073742336, cookie=0, len=16), ['IN_DELETE', 'IN_ISDIR'], path, 'bb'),
             ]
 
-            self.assertEqual(events, expected)
+            self.assertEqual(events_stripped, expected)
 
     def test__renames(self):
 
