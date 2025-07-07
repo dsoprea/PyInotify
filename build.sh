@@ -1,3 +1,3 @@
-#!/bin/bash
+#!/bin/bash -ex
 
-python setup.py sdist bdist_wheel upload
+python -m build
