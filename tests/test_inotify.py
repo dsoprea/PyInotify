@@ -356,8 +356,11 @@ class TestInotifyTree(unittest.TestCase):
 
             events = self.__read_all_events(i)
 
+            for event in events:
+                event[1].sort()
+
             expected = [
-                (inotify.adapters._INOTIFY_EVENT(wd=1, mask=1073742080, cookie=0, len=16), ['IN_ISDIR', 'IN_CREATE'], path, 'folder1'),
+                (inotify.adapters._INOTIFY_EVENT(wd=1, mask=1073742080, cookie=0, len=16), ['IN_CREATE', 'IN_ISDIR'], path, 'folder1'),
             ]
 
             self.assertEqual(events, expected)
@@ -367,8 +370,11 @@ class TestInotifyTree(unittest.TestCase):
 
             events = self.__read_all_events(i)
 
+            for event in events:
+                event[1].sort()
+
             expected = [
-                (inotify.adapters._INOTIFY_EVENT(wd=2, mask=1073742080, cookie=0, len=16), ['IN_ISDIR', 'IN_CREATE'], path1, 'folder2'),
+                (inotify.adapters._INOTIFY_EVENT(wd=2, mask=1073742080, cookie=0, len=16), ['IN_CREATE', 'IN_ISDIR'], path1, 'folder2'),
             ]
 
             self.assertEqual(events, expected)
