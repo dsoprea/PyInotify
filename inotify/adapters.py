@@ -368,13 +368,11 @@ class InotifyTree(_BaseTree):
                  block_duration_s=_DEFAULT_EPOLL_BLOCK_DURATION_S):
         super(InotifyTree, self).__init__(mask=mask, block_duration_s=block_duration_s)
 
-        self.__root_path = path
+        self._load_tree(path)
 
-        self.__load_tree(path)
-
-    def __load_tree(self, path):
+    def _load_tree(self, path):
         _LOGGER.debug("Adding initial watches on tree: [%s]", path)
-        return self._load_tree(path)
+        return super()._load_tree(path)
 
 
 class InotifyTrees(_BaseTree):
@@ -384,9 +382,9 @@ class InotifyTrees(_BaseTree):
                  block_duration_s=_DEFAULT_EPOLL_BLOCK_DURATION_S):
         super(InotifyTrees, self).__init__(mask=mask, block_duration_s=block_duration_s)
 
-        self.__load_trees(paths)
+        self._load_trees(paths)
 
-    def __load_trees(self, paths):
+    def _load_trees(self, paths):
         _LOGGER.debug("Adding initial watches on trees: [%s]", ",".join(map(str, paths)))
         for path in paths:
             self._load_tree(path)
