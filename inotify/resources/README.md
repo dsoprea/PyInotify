@@ -1,5 +1,5 @@
 [![Unit Tests](https://github.com/dsoprea/PyInotify/actions/workflows/push_event_workflow.yml/badge.svg)](https://github.com/dsoprea/PyInotify/actions/workflows/push_event_workflow.yml)
-![PyPI - Version](https://img.shields.io/pypi/v/inotify)
+[![PyPI](https://img.shields.io/pypi/v/inotify)](https://pypi.org/project/inotify)
 
 # Overview
 
